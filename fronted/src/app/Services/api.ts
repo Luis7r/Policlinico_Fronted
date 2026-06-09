@@ -1,4 +1,5 @@
 import { HttpClient } from '@angular/common/http';
+import { HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -11,9 +12,9 @@ export interface LoginResponse {
   idUser: number;
   correo: string;
   rol: 'PACIENTE' | 'MEDICO' | 'ENCARGADO_CITAS' | 'ADMIN';
-  codigo: string;
-  numDoc: string;
-  nombreCompleto: string;
+  codigo: string | null;
+  numDoc: string | null;
+  nombreCompleto: string | null;
 }
 
 export interface Paciente {
@@ -138,8 +139,12 @@ export class ApiService {
     return this.http.post<Especialidad>(`${this.apiUrl}/especialidades`, { nombre });
   }
 
-  listarMedicos(): Observable<Medico[]> {
-    return this.http.get<Medico[]>(`${this.apiUrl}/medicos`);
+  listarMedicos(codEspe?: number): Observable<Medico[]> {
+    let params = new HttpParams();
+    if (codEspe) {
+      params = params.set('codEspe', codEspe);
+    }
+    return this.http.get<Medico[]>(`${this.apiUrl}/medicos`, { params });
   }
 
   registrarMedico(data: RegistroMedicoRequest): Observable<Medico> {
@@ -154,16 +159,24 @@ export class ApiService {
     return this.http.post<EncargadoCitas>(`${this.apiUrl}/encargados-citas`, data);
   }
 
-  listarHorarios(): Observable<Horario[]> {
-    return this.http.get<Horario[]>(`${this.apiUrl}/horarios`);
+  listarHorarios(filtros?: { fecha?: string; codMed?: string; codEncargado?: string }): Observable<Horario[]> {
+    let params = new HttpParams();
+    if (filtros?.fecha) params = params.set('fecha', filtros.fecha);
+    if (filtros?.codMed) params = params.set('codMed', filtros.codMed);
+    if (filtros?.codEncargado) params = params.set('codEncargado', filtros.codEncargado);
+    return this.http.get<Horario[]>(`${this.apiUrl}/horarios`, { params });
   }
 
   crearHorario(data: CrearHorarioRequest): Observable<Horario> {
     return this.http.post<Horario>(`${this.apiUrl}/horarios`, data);
   }
 
-  listarDisponibilidades(): Observable<Disponibilidad[]> {
-    return this.http.get<Disponibilidad[]>(`${this.apiUrl}/disponibilidades`);
+  listarDisponibilidades(filtros?: { estado?: string; fecha?: string; codMed?: string }): Observable<Disponibilidad[]> {
+    let params = new HttpParams();
+    if (filtros?.estado) params = params.set('estado', filtros.estado);
+    if (filtros?.fecha) params = params.set('fecha', filtros.fecha);
+    if (filtros?.codMed) params = params.set('codMed', filtros.codMed);
+    return this.http.get<Disponibilidad[]>(`${this.apiUrl}/disponibilidades`, { params });
   }
 
   crearDisponibilidad(data: CrearDisponibilidadRequest): Observable<Disponibilidad> {

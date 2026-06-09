@@ -1,166 +1,70 @@
-<div class="min-h-screen bg-gradient-to-br from-secondary-50 via-white to-primary-50 flex items-center justify-center p-4 py-12">
-  <!-- Background decoration -->
-  <div class="absolute top-0 left-0 w-96 h-96 bg-secondary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-  <div class="absolute bottom-0 right-0 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+<main class="auth-page">
+  <section class="auth-card register-card">
+    <header class="auth-header">
+      <span class="brand-mark">PC</span>
+      <p class="eyebrow">Registro de paciente</p>
+      <h1>Crear cuenta</h1>
+      <p>Completa tus datos para acceder al portal de citas.</p>
+    </header>
 
-  <div class="relative z-10 w-full max-w-2xl">
-    <!-- Card -->
-    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-secondary-600 to-secondary-700 px-8 py-12 text-center">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-white/10 flex items-center justify-center shadow-lg">
-          <span class="text-lg font-semibold uppercase tracking-[0.3em] text-white">PC</span>
-        </div>
-        <h1 class="text-3xl font-bold text-white mb-2">Crear cuenta</h1>
-        <p class="text-secondary-100">Regístrate como paciente</p>
-      </div>
+    <form (ngSubmit)="guardar()" class="register-form">
+      <label>
+        Tipo de documento
+        <select name="tipoDoc" [(ngModel)]="paciente.tipoDoc" required>
+          <option value="">Selecciona</option>
+          <option value="DNI">DNI</option>
+          <option value="CE">CE</option>
+        </select>
+      </label>
 
-      <!-- Form -->
-      <div class="p-8">
-        <form (ngSubmit)="guardar()" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Tipo de documento -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo de documento</label>
-              <select
-                name="tipoDoc"
-                [(ngModel)]="paciente.tipoDoc"
-                required
-                class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200"
-              >
-                <option value="">Selecciona</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="TI">Tarjeta de Identidad</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="PA">Pasaporte</option>
-              </select>
-            </div>
+      <label>
+        Numero de documento
+        <input type="text" name="numDoc" [(ngModel)]="paciente.numDoc" placeholder="Ej: 70000004" required />
+      </label>
 
-            <!-- Número de documento -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Número de documento</label>
-              <input
-                type="text"
-                name="numDoc"
-                [(ngModel)]="paciente.numDoc"
-                placeholder="123456789"
-                required
-                class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200 placeholder-gray-400"
-              />
-            </div>
+      <label>
+        Nombre
+        <input type="text" name="nombre" [(ngModel)]="paciente.nombre" placeholder="Nombre" required />
+      </label>
 
-            <!-- Nombre -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre</label>
-              <input
-                type="text"
-                name="nombre"
-                [(ngModel)]="paciente.nombre"
-                placeholder="Juan"
-                required
-                class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200 placeholder-gray-400"
-              />
-            </div>
+      <label>
+        Apellido
+        <input type="text" name="apellido" [(ngModel)]="paciente.apellido" placeholder="Apellido" required />
+      </label>
 
-            <!-- Apellido -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Apellido</label>
-              <input
-                type="text"
-                name="apellido"
-                [(ngModel)]="paciente.apellido"
-                placeholder="Pérez"
-                required
-                class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200 placeholder-gray-400"
-              />
-            </div>
+      <label>
+        Sexo
+        <select name="sexo" [(ngModel)]="paciente.sexo" required>
+          <option value="">Selecciona</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+        </select>
+      </label>
 
-            <!-- Sexo -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Sexo</label>
-              <select
-                name="sexo"
-                [(ngModel)]="paciente.sexo"
-                required
-                class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200"
-              >
-                <option value="">Selecciona</option>
-                <option value="M">Masculino</option>
-                <option value="F">Femenino</option>
-                <option value="O">Otro</option>
-              </select>
-            </div>
+      <label>
+        Correo electronico
+        <input type="email" name="correo" [(ngModel)]="paciente.correo" placeholder="tu@correo.com" required />
+      </label>
 
-            <!-- Correo -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Correo electrónico</label>
-              <input
-                type="email"
-                name="correo"
-                [(ngModel)]="paciente.correo"
-                placeholder="tu@correo.com"
-                required
-                class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200 placeholder-gray-400"
-              />
-            </div>
-          </div>
+      <label class="full">
+        Direccion
+        <input type="text" name="direccion" [(ngModel)]="paciente.direccion" placeholder="Direccion" required />
+      </label>
 
-          <!-- Dirección (full width) -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Dirección</label>
-            <input
-              type="text"
-              name="direccion"
-              [(ngModel)]="paciente.direccion"
-              placeholder="Calle 123 #456, Apartamento 789"
-              required
-              class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200 placeholder-gray-400"
-            />
-          </div>
+      <label class="full">
+        Clave
+        <input type="password" name="clave" [(ngModel)]="paciente.clave" placeholder="Minimo 8 caracteres" required />
+      </label>
 
-          <!-- Contraseña (full width) -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Contraseña</label>
-            <input
-              type="password"
-              name="clave"
-              [(ngModel)]="paciente.clave"
-              placeholder="••••••••"
-              required
-              class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition duration-200 placeholder-gray-400"
-            />
-          </div>
+      <button class="primary-button full" type="submit">Registrarme</button>
+    </form>
 
-          <!-- Submit button -->
-          <button
-            type="submit"
-            class="w-full bg-gradient-to-r from-secondary-600 to-secondary-700 hover:from-secondary-700 hover:to-secondary-800 text-white font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:scale-105 active:scale-95 mt-6"
-          >
-            Registrarme
-          </button>
-        </form>
+    <div *ngIf="mensaje" class="alert success">{{ mensaje }}</div>
+    <div *ngIf="error" class="alert error">{{ error }}</div>
 
-        <!-- Messages -->
-        <div *ngIf="mensaje" class="mt-6 p-4 bg-secondary-50 border-l-4 border-secondary-500 rounded">
-          <p class="text-secondary-700 font-medium text-sm">{{ mensaje }}</p>
-        </div>
-
-        <div *ngIf="error" class="mt-6 p-4 bg-red-50 border-l-4 border-red-500 rounded">
-          <p class="text-red-700 font-medium text-sm">{{ error }}</p>
-        </div>
-
-        <!-- Back to login -->
-        <div class="mt-6 text-center border-t border-gray-200 pt-6">
-          <p class="text-gray-600 text-sm mb-3">¿Ya tienes cuenta?</p>
-          <a
-            routerLink="/login"
-            class="inline-block bg-primary-100 hover:bg-primary-200 text-primary-700 font-bold py-2 px-6 rounded-lg transition duration-200"
-          >
-            Ir al login
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
+    <footer class="auth-footer">
+      <span>Ya tienes cuenta?</span>
+      <a routerLink="/login">Ir al login</a>
+    </footer>
+  </section>
+</main>

@@ -14,7 +14,7 @@ interface MenuItem {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: 'sidebar.html',
-  styles: [],
+  styleUrls: ['sidebar.css'],
 })
 export class Sidebar {
   @Input() userInfo: any;
@@ -44,5 +44,15 @@ export class Sidebar {
   handleLogout(): void {
     this.logout.emit();
     this.isOpen = false;
+  }
+
+  displayName(): string {
+    if (this.userInfo?.nombreCompleto) return this.userInfo.nombreCompleto;
+    if (this.userInfo?.rol === 'ADMIN') return 'Administrador';
+    return 'Usuario';
+  }
+
+  displayCode(): string {
+    return this.userInfo?.codigo || 'Sin codigo';
   }
 }

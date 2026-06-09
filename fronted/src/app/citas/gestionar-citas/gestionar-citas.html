@@ -1,0 +1,130 @@
+<section class="manage-shell">
+  <header class="section-header">
+    <div>
+      <p class="eyebrow">Mis citas</p>
+      <h1>Gestiona tus citas registradas</h1>
+    </div>
+  </header>
+
+  <div *ngIf="error" class="alert error">{{ error }}</div>
+
+  <div class="content-grid">
+    <article class="panel appointments-panel">
+      <div class="panel-title">
+        <h2>Citas del paciente</h2>
+        <p>Desde aqui puedes cancelar citas activas. Para cambiar fecha u hora usa el panel de postergacion.</p>
+      </div>
+
+      <div class="table-wrap" *ngIf="citasOrdenadas.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Medico</th>
+              <th>Especialidad</th>
+              <th>Estado</th>
+              <th>Accion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cita of citasOrdenadas">
+              <td>#{{ cita.codCita }}</td>
+              <td>{{ cita.fecha }}</td>
+              <td>{{ formatoHora(cita.horaInicio) }} - {{ formatoHora(cita.horaFin) }}</td>
+              <td>{{ cita.medico }}</td>
+              <td>{{ cita.especialidad }}</td>
+              <td><span [class]="estadoClase(cita)">{{ cita.estado }}</span></td>
+              <td>
+                <button
+                  type="button"
+                  class="danger-button"
+                  [disabled]="procesando || !puedeModificar(cita)"
+                  (click)="abrirModalCancelacion(cita)"
+                >
+                  Cancelar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="citasOrdenadas.length === 0" class="empty-state">
+        Aun no tienes citas registradas.
+      </div>
+    </article>
+
+    <article class="panel postpone-panel">
+      <div class="panel-title">
+        <h2>Postergar cita</h2>
+        <p>Selecciona una cita activa. Los nuevos horarios se filtraran por la misma especialidad.</p>
+      </div>
+
+      <form (ngSubmit)="postergar()" class="postpone-form">
+        <label>
+          Cita activa
+          <select name="citaPostergar" [(ngModel)]="citaPostergar" (change)="seleccionarCitaPostergar()">
+            <option [ngValue]="0">Seleccione una cita</option>
+            <option *ngFor="let cita of citasActivas" [ngValue]="cita.codCita">
+              #{{ cita.codCita }} | {{ cita.especialidad }} | {{ cita.fecha }} | {{ formatoHora(cita.horaInicio) }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Nuevo horario
+          <select name="nuevaDisponibilidad" [(ngModel)]="nuevaDisponibilidad" [disabled]="!citaPostergar">
+            <option [ngValue]="0">
+              {{ cargandoDisponibilidades ? 'Cargando horarios...' : 'Seleccione un horario' }}
+            </option>
+            <option *ngFor="let disponibilidad of disponibilidades" [ngValue]="disponibilidad.codDis">
+              {{ disponibilidadLabel(disponibilidad) }}
+            </option>
+          </select>
+        </label>
+
+        <p *ngIf="citaSeleccionadaParaPostergar()" class="filter-note">
+          Mostrando horarios disponibles para: {{ citaSeleccionadaParaPostergar()?.especialidad }}
+        </p>
+
+        <button class="primary-button" type="submit" [disabled]="procesando || !citaPostergar || !nuevaDisponibilidad">
+          {{ procesando ? 'Procesando...' : 'Postergar cita' }}
+        </button>
+      </form>
+
+      <div *ngIf="citasActivas.length === 0" class="empty-state compact">
+        No tienes citas activas para postergar.
+      </div>
+    </article>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="modalCancelacionAbierto">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="cancelar-title">
+      <header>
+        <h2 id="cancelar-title">Cancelar cita #{{ citaCancelar?.codCita }}</h2>
+        <p>El motivo es opcional y no se guarda en el backend.</p>
+      </header>
+
+      <label>
+        Motivo de cancelacion
+        <textarea
+          name="motivoCancelacion"
+          [(ngModel)]="motivoCancelacion"
+          rows="4"
+          placeholder="Ej: No podre asistir ese dia"
+        ></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="ghost-button" (click)="cerrarModalCancelacion()" [disabled]="procesando">
+          Volver
+        </button>
+        <button type="button" class="danger-solid-button" (click)="confirmarCancelacion()" [disabled]="procesando">
+          {{ procesando ? 'Cancelando...' : 'Confirmar cancelacion' }}
+        </button>
+      </div>
+    </section>
+  </div>
+</section>

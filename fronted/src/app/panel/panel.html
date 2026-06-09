@@ -1,566 +1,299 @@
 <sidebar
   [userInfo]="user"
-  pageTitle="Panel de Control"
+  pageTitle="Panel de control"
   [menuItems]="menuItems"
   (logout)="handleLogout()"
 >
-  <!-- Mensajes -->
-  <div *ngIf="mensaje" class="mb-6 p-4 bg-secondary-50 border-l-4 border-secondary-500 text-secondary-700 rounded">
-    <p class="font-medium">{{ mensaje }}</p>
-  </div>
-  <div *ngIf="error" class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
-    <p class="font-medium">{{ error }}</p>
-  </div>
+  <div *ngIf="mensaje" class="app-alert success-alert">{{ mensaje }}</div>
+  <div *ngIf="error" class="app-alert error-alert">{{ error }}</div>
 
-  <!-- Contenido por rol - PACIENTE -->
-  <div *ngIf="esPaciente()" class="space-y-6">
-    <!-- Inicio -->
-    <div *ngIf="activeTab === 'inicio'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-primary-600">{{ citasPaciente.length }}</h3>
-        <p class="text-gray-600">Citas registradas</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-secondary-600">{{ getPendientesCount() }}</h3>
-        <p class="text-gray-600">Citas próximas</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-blue-600">{{ getCanceladasCount() }}</h3>
-        <p class="text-gray-600">Citas canceladas</p>
-      </div>
+  <section *ngIf="activeTab === 'inicio'" class="page-stack">
+    <header class="welcome-panel">
+      <p class="eyebrow">Sesion activa</p>
+      <h1>{{ nombreUsuario() }}</h1>
+      <p class="muted">Rol: {{ user?.rol }}<span *ngIf="user?.codigo"> | Codigo: {{ user.codigo }}</span></p>
+    </header>
+
+    <div class="metric-grid" *ngIf="esPaciente()">
+      <article class="metric-card">
+        <span class="metric-label">Total de citas</span>
+        <strong>{{ citasPaciente.length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Activas</span>
+        <strong>{{ citasActivasPaciente() }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Canceladas</span>
+        <strong>{{ citasCanceladasPaciente() }}</strong>
+      </article>
     </div>
 
-    <!-- Registrar cita -->
-    <div *ngIf="activeTab === 'registrar'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700 mb-4">Registrar nueva cita</h2>
-        <form (ngSubmit)="registrarCita()" class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Disponibilidad</label>
-            <select
-              name="codDis"
-              [(ngModel)]="nuevaCita.codDis"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            >
-              <option [ngValue]="0">Seleccione una disponibilidad</option>
-              <option *ngFor="let d of disponibilidadesLibres()" [ngValue]="d.codDis">
-                {{ d.horario.fecha }} - {{ d.horaInicio }} a {{ d.horaFin }} - Dr/Dra {{ d.horario.medico.nombre }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            
-          >
-            Registrar cita
-          </button>
-        </form>
-      </div>
-
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700 mb-4">Postergar cita</h2>
-        <form (ngSubmit)="postergarCita()" class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Cita a postergar</label>
-            <select
-              name="codCita"
-              [(ngModel)]="postergacion.codCita"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            >
-              <option [ngValue]="0">Seleccione</option>
-              <option *ngFor="let c of citasPaciente" [ngValue]="c.codCita">
-                {{ c.fecha }} - {{ c.horaInicio }} - {{ c.estado }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Nueva disponibilidad</label>
-            <select
-              name="nuevoCodDis"
-              [(ngModel)]="postergacion.nuevoCodDis"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            >
-              <option [ngValue]="0">Seleccione</option>
-              <option *ngFor="let d of disponibilidadesLibres()" [ngValue]="d.codDis">
-                {{ d.horario.fecha }} - {{ d.horaInicio }} a {{ d.horaFin }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            class="w-full bg-secondary-600 hover:bg-secondary-700 font-bold py-2 px-4 rounded-lg transition duration-200"
-          >
-            Postergar
-          </button>
-        </form>
-      </div>
+    <div class="metric-grid" *ngIf="esMedico()">
+      <article class="metric-card">
+        <span class="metric-label">Pendientes</span>
+        <strong>{{ citasPendientes.length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Atendidas</span>
+        <strong>{{ historial.length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Total</span>
+        <strong>{{ citasPendientes.length + historial.length }}</strong>
+      </article>
     </div>
 
-    <!-- Mis citas -->
-    <div *ngIf="activeTab === 'citas'" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="p-6 border-b border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700">Mis citas</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Código</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Fecha</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Hora</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Médico</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Estado</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr
-              *ngFor="let c of citasPaciente"
-              class="hover:bg-gray-50 transition"
-            >
-              <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ c.codCita }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.fecha }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.horaInicio }} - {{ c.horaFin }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.medico }}</td>
-              <td class="px-6 py-4 text-sm">
-                <span
-                  [ngClass]="{
-                    'bg-secondary-100 text-secondary-800': c.estado === 'PENDIENTE',
-                    'bg-blue-100 text-blue-800': c.estado === 'ATENDIDA',
-                    'bg-red-100 text-red-800': c.estado === 'CANCELADA'
-                  }"
-                  class="px-3 py-1 rounded-full text-xs font-semibold"
-                >
-                  {{ c.estado }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-sm">
-                <button
-                  *ngIf="c.estado === 'PENDIENTE'"
-                  (click)="cancelarCita(c.codCita)"
-                  
-                >
-                  Cancelar
-                </button>
-                <span *ngIf="c.estado !== 'PENDIENTE'" class="text-gray-400">-</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div *ngIf="citasPaciente.length === 0" class="p-12 text-center text-gray-500">
-        <p class="text-lg">No tienes citas registradas</p>
+    <div class="metric-grid" *ngIf="esEncargado()">
+      <article class="metric-card">
+        <span class="metric-label">Especialidades</span>
+        <strong>{{ especialidades.length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Medicos</span>
+        <strong>{{ medicos.length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Horarios</span>
+        <strong>{{ horarios.length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Disponibilidades</span>
+        <strong>{{ disponibilidades.length }}</strong>
+      </article>
+    </div>
+  </section>
+
+  <app-registrar-cita
+    *ngIf="esPaciente() && activeTab === 'registrar'"
+    [pacienteCodigo]="user?.codigo || null"
+    (completed)="citaPacienteActualizada($event)"
+  ></app-registrar-cita>
+
+  <app-gestionar-citas
+    *ngIf="esPaciente() && activeTab === 'citas'"
+    [pacienteCodigo]="user?.codigo || null"
+    [citas]="citasPaciente"
+    (changed)="citaPacienteActualizada($event)"
+  ></app-gestionar-citas>
+
+  <section *ngIf="esMedico() && activeTab === 'pendientes'" class="data-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Medico</p>
+        <h2>Citas pendientes</h2>
       </div>
     </div>
-  </div>
+    <div class="table-wrap" *ngIf="citasPendientes.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Paciente</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Especialidad</th>
+            <th>Estado</th>
+            <th>Accion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cita of citasPendientes">
+            <td>#{{ cita.codCita }}</td>
+            <td>{{ cita.paciente }}</td>
+            <td>{{ cita.fecha }}</td>
+            <td>{{ formatoHora(cita.horaInicio) }} - {{ formatoHora(cita.horaFin) }}</td>
+            <td>{{ cita.especialidad }}</td>
+            <td><span [class]="estadoClase(cita)">{{ cita.estado }}</span></td>
+            <td>
+              <button class="primary-button small" type="button" (click)="atenderCita(cita.codCita)">
+                Atender
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state" *ngIf="citasPendientes.length === 0">No hay citas pendientes.</div>
+  </section>
 
-  <!-- Contenido por rol - MÉDICO -->
-  <div *ngIf="esMedico()" class="space-y-6">
-    <!-- Inicio -->
-    <div *ngIf="activeTab === 'inicio'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-primary-600">{{ citasPendientes.length }}</h3>
-        <p class="text-gray-600">Citas pendientes</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-secondary-600">{{ historial.length }}</h3>
-        <p class="text-gray-600">Citas atendidas</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-blue-600">{{ (citasPendientes.length + historial.length) }}</h3>
-        <p class="text-gray-600">Total de citas</p>
+  <section *ngIf="esMedico() && activeTab === 'historial'" class="data-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Medico</p>
+        <h2>Historial de citas atendidas</h2>
       </div>
     </div>
+    <div class="table-wrap" *ngIf="historial.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Paciente</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Especialidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cita of historial">
+            <td>#{{ cita.codCita }}</td>
+            <td>{{ cita.paciente }}</td>
+            <td>{{ cita.fecha }}</td>
+            <td>{{ formatoHora(cita.horaInicio) }} - {{ formatoHora(cita.horaFin) }}</td>
+            <td>{{ cita.especialidad }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state" *ngIf="historial.length === 0">Todavia no hay citas atendidas.</div>
+  </section>
 
-    <!-- Citas pendientes -->
-    <div *ngIf="activeTab === 'pendientes'" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="p-6 border-b border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700">Citas pendientes</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Código</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Paciente</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Fecha</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Hora</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Acción</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr *ngFor="let c of citasPendientes" class="hover:bg-gray-50 transition">
-              <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ c.codCita }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.paciente }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.fecha }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.horaInicio }} - {{ c.horaFin }}</td>
-              <td class="px-6 py-4 text-sm">
-                <button
-                  (click)="atenderCita(c.codCita)"
-                  class="bg-secondary-600 hover:bg-secondary-700 text-white px-3 py-1 rounded transition text-xs font-medium"
-                >
-                  Atender
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div *ngIf="citasPendientes.length === 0" class="p-12 text-center text-gray-500">
-        <p class="text-lg">No tienes citas pendientes</p>
+  <section *ngIf="esEncargado() && activeTab === 'especialidades'" class="form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Catalogo</p>
+        <h2>Especialidades</h2>
       </div>
     </div>
+    <form (ngSubmit)="crearEspecialidad()" class="form-grid one-column">
+      <label>
+        Nombre
+        <input name="nuevaEspecialidad" [(ngModel)]="nuevaEspecialidad" placeholder="Ej: Dermatologia" required />
+      </label>
+      <button class="primary-button" type="submit">Crear especialidad</button>
+    </form>
+    <div class="pill-list">
+      <span *ngFor="let especialidad of especialidades">{{ especialidad.nombre }}</span>
+    </div>
+  </section>
 
-    <!-- Historial -->
-    <div *ngIf="activeTab === 'historial'" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="p-6 border-b border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700">Historial atendido</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Código</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Paciente</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Fecha</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Hora</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr *ngFor="let c of historial" class="hover:bg-gray-50 transition">
-              <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ c.codCita }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.paciente }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.fecha }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ c.horaInicio }} - {{ c.horaFin }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div *ngIf="historial.length === 0" class="p-12 text-center text-gray-500">
-        <p class="text-lg">No hay citas atendidas aún</p>
+  <section *ngIf="esEncargado() && activeTab === 'medicos'" class="form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Usuarios</p>
+        <h2>Registrar medico</h2>
       </div>
     </div>
-  </div>
+    <form (ngSubmit)="registrarMedico()" class="form-grid">
+      <label>Documento <input name="medNumDoc" [(ngModel)]="nuevoMedico.numDoc" required /></label>
+      <label>Nombre <input name="medNombre" [(ngModel)]="nuevoMedico.nombre" required /></label>
+      <label>Apellido <input name="medApellido" [(ngModel)]="nuevoMedico.apellido" required /></label>
+      <label>
+        Especialidad
+        <select name="codEspe" [(ngModel)]="nuevoMedico.codEspe" required>
+          <option [ngValue]="0">Seleccione</option>
+          <option *ngFor="let especialidad of especialidades" [ngValue]="especialidad.codEspe">
+            {{ especialidad.nombre }}
+          </option>
+        </select>
+      </label>
+      <label>Correo <input type="email" name="medCorreo" [(ngModel)]="nuevoMedico.correo" required /></label>
+      <label>Clave <input type="password" name="medClave" [(ngModel)]="nuevoMedico.clave" required /></label>
+      <button class="primary-button wide" type="submit">Registrar medico</button>
+    </form>
+  </section>
 
-  <!-- Contenido por rol - ENCARGADO -->
-  <div *ngIf="esEncargado()" class="space-y-6">
-    <!-- Inicio -->
-    <div *ngIf="activeTab === 'inicio'" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-primary-600">{{ especialidades.length }}</h3>
-        <p class="text-gray-600">Especialidades</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-secondary-600">{{ medicos.length }}</h3>
-        <p class="text-gray-600">Médicos</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-blue-600">{{ horarios.length }}</h3>
-        <p class="text-gray-600">Horarios</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition">
-        <h3 class="text-2xl font-bold text-orange-600">{{ disponibilidades.length }}</h3>
-        <p class="text-gray-600">Disponibilidades</p>
+  <section *ngIf="esEncargado() && activeTab === 'encargados'" class="form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Usuarios</p>
+        <h2>Registrar encargado de citas</h2>
       </div>
     </div>
+    <form (ngSubmit)="registrarEncargado()" class="form-grid">
+      <label>Documento <input name="encNumDoc" [(ngModel)]="nuevoEncargado.numDoc" required /></label>
+      <label>Nombre <input name="encNombre" [(ngModel)]="nuevoEncargado.nombre" required /></label>
+      <label>Apellido <input name="encApellido" [(ngModel)]="nuevoEncargado.apellido" required /></label>
+      <label>Correo <input type="email" name="encCorreo" [(ngModel)]="nuevoEncargado.correo" required /></label>
+      <label>Clave <input type="password" name="encClave" [(ngModel)]="nuevoEncargado.clave" required /></label>
+      <button class="primary-button wide" type="submit">Registrar encargado</button>
+    </form>
+  </section>
 
-    <!-- Especialidades -->
-    <div *ngIf="activeTab === 'especialidades'" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 class="text-xl font-bold text-primary-700 mb-4">Crear especialidad</h2>
-      <form (ngSubmit)="crearEspecialidad()" class="space-y-4 max-w-md">
+  <section *ngIf="esEncargado() && activeTab === 'horarios'" class="page-stack">
+    <article class="form-panel">
+      <div class="panel-heading">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre de especialidad</label>
-          <input
-            name="nuevaEspecialidad"
-            [(ngModel)]="nuevaEspecialidad"
-            placeholder="Ej: Cardiología"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
+          <p class="eyebrow">Agenda</p>
+          <h2>Crear horario medico</h2>
         </div>
-        <button
-          type="submit"
-          class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
-        >
-          Crear especialidad
-        </button>
-      </form>
-    </div>
-
-    <!-- Médicos -->
-    <div *ngIf="activeTab === 'medicos'" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 class="text-xl font-bold text-primary-700 mb-4">Registrar médico</h2>
-      <form (ngSubmit)="registrarMedico()" class="space-y-4 max-w-md">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Documento</label>
-          <input
-            name="medNumDoc"
-            [(ngModel)]="nuevoMedico.numDoc"
-            placeholder="Documento de identidad"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre</label>
-          <input
-            name="medNombre"
-            [(ngModel)]="nuevoMedico.nombre"
-            placeholder="Nombre"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Apellido</label>
-          <input
-            name="medApellido"
-            [(ngModel)]="nuevoMedico.apellido"
-            placeholder="Apellido"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Especialidad</label>
-          <select
-            name="codEspe"
-            [(ngModel)]="nuevoMedico.codEspe"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          >
-            <option [ngValue]="0">Seleccione</option>
-            <option *ngFor="let e of especialidades" [ngValue]="e.codEspe">{{ e.nombre }}</option>
+      </div>
+      <form (ngSubmit)="crearHorario()" class="form-grid">
+        <label>Fecha <input type="date" name="fecha" [(ngModel)]="nuevoHorario.fecha" required /></label>
+        <label>
+          Medico
+          <select name="codMed" [(ngModel)]="nuevoHorario.codMed" required>
+            <option value="">Seleccione</option>
+            <option *ngFor="let medico of medicos" [value]="medico.codMed">
+              {{ medico.nombre }} {{ medico.apellido }} - {{ medico.especialidad.nombre }}
+            </option>
           </select>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Correo</label>
-          <input
-            type="email"
-            name="medCorreo"
-            [(ngModel)]="nuevoMedico.correo"
-            placeholder="correo@ejemplo.com"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Contraseña</label>
-          <input
-            type="password"
-            name="medClave"
-            [(ngModel)]="nuevoMedico.clave"
-            placeholder="Contraseña"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <button
-          type="submit"
-          class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
-        >
-          Registrar médico
-        </button>
+        </label>
+        <label>
+          Encargado
+          <select name="codEncargado" [(ngModel)]="nuevoHorario.codEncargado" required>
+            <option value="">Seleccione</option>
+            <option *ngFor="let encargado of encargados" [value]="encargado.codEncargado">
+              {{ encargado.nombre }} {{ encargado.apellido }}
+            </option>
+          </select>
+        </label>
+        <button class="primary-button wide" type="submit">Crear horario</button>
       </form>
-    </div>
+    </article>
 
-    <!-- Encargados -->
-    <div *ngIf="activeTab === 'encargados'" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 class="text-xl font-bold text-primary-700 mb-4">Registrar encargado</h2>
-      <form (ngSubmit)="registrarEncargado()" class="space-y-4 max-w-md">
+    <article class="data-panel">
+      <div class="panel-heading">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Documento</label>
-          <input
-            name="encNumDoc"
-            [(ngModel)]="nuevoEncargado.numDoc"
-            placeholder="Documento de identidad"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre</label>
-          <input
-            name="encNombre"
-            [(ngModel)]="nuevoEncargado.nombre"
-            placeholder="Nombre"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Apellido</label>
-          <input
-            name="encApellido"
-            [(ngModel)]="nuevoEncargado.apellido"
-            placeholder="Apellido"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Correo</label>
-          <input
-            type="email"
-            name="encCorreo"
-            [(ngModel)]="nuevoEncargado.correo"
-            placeholder="correo@ejemplo.com"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Contraseña</label>
-          <input
-            type="password"
-            name="encClave"
-            [(ngModel)]="nuevoEncargado.clave"
-            placeholder="Contraseña"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-          />
-        </div>
-        <button
-          type="submit"
-          class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
-        >
-          Registrar encargado
-        </button>
-      </form>
-    </div>
-
-    <!-- Horarios -->
-    <div *ngIf="activeTab === 'horarios'" class="space-y-6">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700 mb-4">Crear horario</h2>
-        <form (ngSubmit)="crearHorario()" class="space-y-4 max-w-md">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha</label>
-            <input
-              type="date"
-              name="fecha"
-              [(ngModel)]="nuevoHorario.fecha"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Médico</label>
-            <select
-              name="codMed"
-              [(ngModel)]="nuevoHorario.codMed"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            >
-              <option value="">Seleccione</option>
-              <option *ngFor="let m of medicos" [value]="m.codMed">
-                {{ m.nombre }} {{ m.apellido }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Encargado</label>
-            <select
-              name="codEncargado"
-              [(ngModel)]="nuevoHorario.codEncargado"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            >
-              <option value="">Seleccione</option>
-              <option *ngFor="let e of encargados" [value]="e.codEncargado">
-                {{ e.nombre }} {{ e.apellido }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
-          >
-            Crear horario
-          </button>
-        </form>
-      </div>
-
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-xl font-bold text-primary-700">Horarios creados</h2>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Código</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Fecha</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Médico</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700">Encargado</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <tr *ngFor="let h of horarios" class="hover:bg-gray-50 transition">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ h.codHor }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ h.fecha }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ h.medico.nombre }} {{ h.medico.apellido }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ h.encargadoCitas?.nombre }} {{ h.encargadoCitas?.apellido }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div *ngIf="horarios.length === 0" class="p-12 text-center text-gray-500">
-          <p class="text-lg">No hay horarios creados</p>
+          <p class="eyebrow">Agenda</p>
+          <h2>Horarios creados</h2>
         </div>
       </div>
-    </div>
+      <div class="table-wrap" *ngIf="horarios.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Fecha</th>
+              <th>Medico</th>
+              <th>Encargado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let horario of horarios">
+              <td>#{{ horario.codHor }}</td>
+              <td>{{ horario.fecha }}</td>
+              <td>{{ horario.medico.nombre }} {{ horario.medico.apellido }}</td>
+              <td>{{ horario.encargadoCitas?.nombre || '-' }} {{ horario.encargadoCitas?.apellido || '' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" *ngIf="horarios.length === 0">No hay horarios creados.</div>
+    </article>
+  </section>
 
-    <!-- Disponibilidades -->
-    <div *ngIf="activeTab === 'disponibilidades'" class="space-y-6">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h2 class="text-xl font-bold text-primary-700 mb-4">Crear disponibilidad</h2>
-        <form (ngSubmit)="crearDisponibilidad()" class="space-y-4 max-w-md">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Horario</label>
-            <select
-              name="codHor"
-              [(ngModel)]="nuevaDisponibilidad.codHor"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            >
-              <option [ngValue]="0">Seleccione</option>
-              <option *ngFor="let h of horarios" [ngValue]="h.codHor">
-                {{ h.fecha }} - {{ h.medico.nombre }} {{ h.medico.apellido }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Hora inicio</label>
-            <input
-              type="time"
-              name="horaInicio"
-              [(ngModel)]="nuevaDisponibilidad.horaInicio"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Hora fin</label>
-            <input
-              type="time"
-              name="horaFin"
-              [(ngModel)]="nuevaDisponibilidad.horaFin"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-            />
-          </div>
-          <button
-            type="submit"
-            class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
-          >
-            Crear disponibilidad
-          </button>
-        </form>
+  <section *ngIf="esEncargado() && activeTab === 'disponibilidades'" class="form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Agenda</p>
+        <h2>Crear disponibilidad</h2>
       </div>
     </div>
-  </div>
+    <form (ngSubmit)="crearDisponibilidad()" class="form-grid">
+      <label>
+        Horario
+        <select name="codHor" [(ngModel)]="nuevaDisponibilidad.codHor" required>
+          <option [ngValue]="0">Seleccione</option>
+          <option *ngFor="let horario of horarios" [ngValue]="horario.codHor">
+            {{ horario.fecha }} - {{ horario.medico.nombre }} {{ horario.medico.apellido }}
+          </option>
+        </select>
+      </label>
+      <label>Hora inicio <input type="time" name="horaInicio" [(ngModel)]="nuevaDisponibilidad.horaInicio" required /></label>
+      <label>Hora fin <input type="time" name="horaFin" [(ngModel)]="nuevaDisponibilidad.horaFin" required /></label>
+      <button class="primary-button wide" type="submit">Crear disponibilidad</button>
+    </form>
+  </section>
 </sidebar>

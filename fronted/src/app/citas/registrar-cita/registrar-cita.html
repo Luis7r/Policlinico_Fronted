@@ -1,0 +1,149 @@
+<section class="booking-shell">
+  <header class="section-header">
+    <div>
+      <p class="eyebrow">Nueva cita</p>
+      <h1>Agenda por especialidad, medico y horario</h1>
+    </div>
+    <div class="steps" aria-label="Progreso de registro">
+      <span [class.active]="pasoActual() >= 1">1 Especialidad</span>
+      <span [class.active]="pasoActual() >= 2">2 Medico</span>
+      <span [class.active]="pasoActual() >= 3">3 Horario</span>
+      <span [class.active]="pasoActual() >= 4">4 Confirmar</span>
+    </div>
+  </header>
+
+  <div *ngIf="error" class="alert error">{{ error }}</div>
+
+  <article class="panel" *ngIf="!especialidadSeleccionada">
+    <div class="panel-title">
+      <h2>Selecciona una especialidad</h2>
+      <p>Solo se mostraran medicos vinculados a la especialidad elegida.</p>
+    </div>
+
+    <div *ngIf="cargandoEspecialidades" class="empty-state">Cargando especialidades...</div>
+
+    <div class="option-grid" *ngIf="!cargandoEspecialidades">
+      <button
+        type="button"
+        class="option-card"
+        *ngFor="let especialidad of especialidades"
+        (click)="seleccionarEspecialidad(especialidad)"
+      >
+        <span class="option-title">{{ especialidad.nombre }}</span>
+        <span class="option-meta">Ver medicos</span>
+      </button>
+    </div>
+
+    <div *ngIf="!cargandoEspecialidades && especialidades.length === 0" class="empty-state">
+      No hay especialidades registradas.
+    </div>
+  </article>
+
+  <article class="panel" *ngIf="especialidadSeleccionada && !medicoSeleccionado">
+    <div class="panel-title with-action">
+      <div>
+        <h2>{{ especialidadSeleccionada.nombre }}</h2>
+        <p>Elige el medico que atendera la cita.</p>
+      </div>
+      <button class="ghost-button" type="button" (click)="volverAEspecialidades()">Cambiar</button>
+    </div>
+
+    <div *ngIf="cargandoMedicos" class="empty-state">Cargando medicos...</div>
+
+    <div class="option-grid" *ngIf="!cargandoMedicos">
+      <button
+        type="button"
+        class="option-card doctor"
+        *ngFor="let medico of medicos"
+        (click)="seleccionarMedico(medico)"
+      >
+        <span class="avatar">{{ medico.nombre.charAt(0) }}{{ medico.apellido.charAt(0) }}</span>
+        <span class="option-title">{{ medico.nombre }} {{ medico.apellido }}</span>
+        <span class="option-meta">{{ medico.codMed }}</span>
+      </button>
+    </div>
+
+    <div *ngIf="!cargandoMedicos && medicos.length === 0" class="empty-state">
+      No hay medicos registrados para esta especialidad.
+    </div>
+  </article>
+
+  <article class="panel" *ngIf="medicoSeleccionado && !disponibilidadSeleccionada">
+    <div class="panel-title with-action">
+      <div>
+        <h2>{{ medicoSeleccionado.nombre }} {{ medicoSeleccionado.apellido }}</h2>
+        <p>Selecciona un horario disponible para registrar la cita.</p>
+      </div>
+      <button class="ghost-button" type="button" (click)="volverAMedicos()">Cambiar medico</button>
+    </div>
+
+    <div class="filter-bar">
+      <label>
+        Filtrar por fecha
+        <input type="date" name="fechaFiltro" [(ngModel)]="fechaFiltro" (change)="cargarDisponibilidades()" />
+      </label>
+      <button class="ghost-button" type="button" (click)="limpiarFechaFiltro()" [disabled]="!fechaFiltro">
+        Limpiar filtro
+      </button>
+    </div>
+
+    <div *ngIf="cargandoDisponibilidades" class="empty-state">Cargando horarios...</div>
+
+    <div class="slot-grid" *ngIf="!cargandoDisponibilidades">
+      <button
+        type="button"
+        class="slot-card"
+        *ngFor="let disponibilidad of disponibilidades"
+        (click)="seleccionarDisponibilidad(disponibilidad)"
+      >
+        <span class="slot-date">{{ disponibilidad.horario.fecha }}</span>
+        <span class="slot-time">
+          {{ formatoHora(disponibilidad.horaInicio) }} - {{ formatoHora(disponibilidad.horaFin) }}
+        </span>
+        <span class="option-meta">Cod. disponibilidad {{ disponibilidad.codDis }}</span>
+      </button>
+    </div>
+
+    <div *ngIf="!cargandoDisponibilidades && disponibilidades.length === 0" class="empty-state">
+      Este medico no tiene horarios disponibles.
+    </div>
+  </article>
+
+  <article class="panel confirm-panel" *ngIf="disponibilidadSeleccionada">
+    <div class="panel-title with-action">
+      <div>
+        <h2>Confirma la cita</h2>
+        <p>Revisa los datos antes de registrar. Se enviara una notificacion al correo registrado.</p>
+      </div>
+      <button class="ghost-button" type="button" (click)="disponibilidadSeleccionada = null">
+        Cambiar horario
+      </button>
+    </div>
+
+    <dl class="summary">
+      <div>
+        <dt>Especialidad</dt>
+        <dd>{{ especialidadSeleccionada?.nombre }}</dd>
+      </div>
+      <div>
+        <dt>Medico</dt>
+        <dd>{{ medicoSeleccionado?.nombre }} {{ medicoSeleccionado?.apellido }}</dd>
+      </div>
+      <div>
+        <dt>Fecha</dt>
+        <dd>{{ disponibilidadSeleccionada.horario.fecha }}</dd>
+      </div>
+      <div>
+        <dt>Hora</dt>
+        <dd>
+          {{ formatoHora(disponibilidadSeleccionada.horaInicio) }} -
+          {{ formatoHora(disponibilidadSeleccionada.horaFin) }}
+        </dd>
+      </div>
+    </dl>
+
+    <button class="primary-button" type="button" (click)="registrar()" [disabled]="guardando">
+      {{ guardando ? 'Registrando...' : 'Registrar cita' }}
+    </button>
+  </article>
+</section>
