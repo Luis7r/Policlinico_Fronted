@@ -115,7 +115,7 @@ export interface Cita {
   providedIn: 'root',
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = 'https://glistening-achievement-production-3321.up.railway.app/api';
 
   constructor(private http: HttpClient) {}
 

@@ -37,7 +37,7 @@ export interface RegistroPacienteResponse {
   providedIn: 'root',
 })
 export class PacienteService {
-  private apiUrl = 'http://localhost:8080/api/pacientes';
+  private apiUrl = 'https://glistening-achievement-production-3321.up.railway.app/api/pacientes';
 
   constructor(private http: HttpClient) {}
 

@@ -11,7 +11,7 @@
     <header class="welcome-panel">
       <p class="eyebrow">Sesion activa</p>
       <h1>{{ nombreUsuario() }}</h1>
-      <p class="muted">Rol: {{ user?.rol }}<span *ngIf="user?.codigo"> | Codigo: {{ user.codigo }}</span></p>
+      <p class="muted">Rol: {{ user?.rol }}<span *ngIf="user?.codigo"> | Codigo: {{ user?.codigo }}</span></p>
     </header>
 
     <div class="metric-grid" *ngIf="esPaciente()">
