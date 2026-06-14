@@ -42,9 +42,17 @@
         <span class="metric-label">Total</span>
         <strong>{{ citasPendientes.length + historial.length }}</strong>
       </article>
+      <article class="metric-card">
+        <span class="metric-label">Solicitudes enviadas</span>
+        <strong>{{ solicitudesMedicas.length }}</strong>
+      </article>
     </div>
 
     <div class="metric-grid" *ngIf="esEncargado()">
+      <article class="metric-card">
+        <span class="metric-label">Solicitudes medicas</span>
+        <strong>{{ solicitudesMedicas.length }}</strong>
+      </article>
       <article class="metric-card">
         <span class="metric-label">Especialidades</span>
         <strong>{{ especialidades.length }}</strong>
@@ -76,6 +84,51 @@
     [citas]="citasPaciente"
     (changed)="citaPacienteActualizada($event)"
   ></app-gestionar-citas>
+
+  <section *ngIf="esMedico() && activeTab === 'solicitar'" class="page-stack">
+    <article class="form-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Medico</p>
+          <h2>Solicitar disponibilidad</h2>
+        </div>
+      </div>
+      <form (ngSubmit)="crearSolicitudMedica()" class="form-grid">
+        <label>Fecha <input type="date" name="solFecha" [(ngModel)]="nuevaSolicitud.fecha" required /></label>
+        <label>Hora entrada <input type="time" name="solHoraInicio" [(ngModel)]="nuevaSolicitud.horaInicio" required /></label>
+        <label>Hora salida <input type="time" name="solHoraFin" [(ngModel)]="nuevaSolicitud.horaFin" required /></label>
+        <button class="primary-button wide" type="submit">Enviar solicitud</button>
+      </form>
+    </article>
+
+    <article class="data-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Medico</p>
+          <h2>Mis solicitudes</h2>
+        </div>
+      </div>
+      <div class="table-wrap" *ngIf="solicitudesMedicas.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Fecha</th>
+              <th>Rango</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let solicitud of solicitudesMedicas">
+              <td>#{{ solicitud.idSolicitud }}</td>
+              <td>{{ solicitud.fecha }}</td>
+              <td>{{ formatoHora(solicitud.horaInicio) }} - {{ formatoHora(solicitud.horaFin) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" *ngIf="solicitudesMedicas.length === 0">Aun no envias solicitudes.</div>
+    </article>
+  </section>
 
   <section *ngIf="esMedico() && activeTab === 'pendientes'" class="data-panel">
     <div class="panel-heading">
@@ -198,7 +251,7 @@
     <div class="panel-heading">
       <div>
         <p class="eyebrow">Usuarios</p>
-        <h2>Registrar encargado de citas</h2>
+        <h2>Registrar jefe medico</h2>
       </div>
     </div>
     <form (ngSubmit)="registrarEncargado()" class="form-grid">
@@ -207,8 +260,46 @@
       <label>Apellido <input name="encApellido" [(ngModel)]="nuevoEncargado.apellido" required /></label>
       <label>Correo <input type="email" name="encCorreo" [(ngModel)]="nuevoEncargado.correo" required /></label>
       <label>Clave <input type="password" name="encClave" [(ngModel)]="nuevoEncargado.clave" required /></label>
-      <button class="primary-button wide" type="submit">Registrar encargado</button>
+      <button class="primary-button wide" type="submit">Registrar jefe medico</button>
     </form>
+  </section>
+
+  <section *ngIf="esEncargado() && activeTab === 'solicitudes'" class="data-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Jefe medico</p>
+        <h2>Solicitudes medicas recibidas</h2>
+      </div>
+    </div>
+    <div class="table-wrap" *ngIf="solicitudesMedicas.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Medico</th>
+            <th>Especialidad</th>
+            <th>Fecha</th>
+            <th>Rango solicitado</th>
+            <th>Accion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let solicitud of solicitudesMedicas">
+            <td>#{{ solicitud.idSolicitud }}</td>
+            <td>{{ solicitud.medico.nombre }} {{ solicitud.medico.apellido }}</td>
+            <td>{{ solicitud.medico.especialidad.nombre }}</td>
+            <td>{{ solicitud.fecha }}</td>
+            <td>{{ formatoHora(solicitud.horaInicio) }} - {{ formatoHora(solicitud.horaFin) }}</td>
+            <td>
+              <button class="primary-button small" type="button" (click)="prepararSolicitud(solicitud)">
+                Armar horario
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state" *ngIf="solicitudesMedicas.length === 0">No hay solicitudes medicas.</div>
   </section>
 
   <section *ngIf="esEncargado() && activeTab === 'horarios'" class="page-stack">
@@ -219,6 +310,12 @@
           <h2>Crear horario medico</h2>
         </div>
       </div>
+      <p *ngIf="solicitudPreparada" class="context-note">
+        Usando solicitud #{{ solicitudPreparada.idSolicitud }}:
+        {{ solicitudPreparada.medico.nombre }} {{ solicitudPreparada.medico.apellido }},
+        {{ solicitudPreparada.fecha }},
+        {{ formatoHora(solicitudPreparada.horaInicio) }} - {{ formatoHora(solicitudPreparada.horaFin) }}.
+      </p>
       <form (ngSubmit)="crearHorario()" class="form-grid">
         <label>Fecha <input type="date" name="fecha" [(ngModel)]="nuevoHorario.fecha" required /></label>
         <label>
@@ -227,15 +324,6 @@
             <option value="">Seleccione</option>
             <option *ngFor="let medico of medicos" [value]="medico.codMed">
               {{ medico.nombre }} {{ medico.apellido }} - {{ medico.especialidad.nombre }}
-            </option>
-          </select>
-        </label>
-        <label>
-          Encargado
-          <select name="codEncargado" [(ngModel)]="nuevoHorario.codEncargado" required>
-            <option value="">Seleccione</option>
-            <option *ngFor="let encargado of encargados" [value]="encargado.codEncargado">
-              {{ encargado.nombre }} {{ encargado.apellido }}
             </option>
           </select>
         </label>
@@ -278,7 +366,7 @@
     <div class="panel-heading">
       <div>
         <p class="eyebrow">Agenda</p>
-        <h2>Crear disponibilidad</h2>
+        <h2>Crear disponibilidades por rango</h2>
       </div>
     </div>
     <form (ngSubmit)="crearDisponibilidad()" class="form-grid">
@@ -291,9 +379,12 @@
           </option>
         </select>
       </label>
-      <label>Hora inicio <input type="time" name="horaInicio" [(ngModel)]="nuevaDisponibilidad.horaInicio" required /></label>
-      <label>Hora fin <input type="time" name="horaFin" [(ngModel)]="nuevaDisponibilidad.horaFin" required /></label>
-      <button class="primary-button wide" type="submit">Crear disponibilidad</button>
+      <label>Hora entrada <input type="time" name="horaInicio" [(ngModel)]="nuevaDisponibilidad.horaInicio" required /></label>
+      <label>Hora salida <input type="time" name="horaFin" [(ngModel)]="nuevaDisponibilidad.horaFin" required /></label>
+      <button class="primary-button wide" type="submit">Crear bloques de 30 min</button>
     </form>
+    <p class="context-note">
+      Ejemplo: si registras 13:00 a 19:00, el sistema crea automaticamente bloques de 30 minutos.
+    </p>
   </section>
 </sidebar>

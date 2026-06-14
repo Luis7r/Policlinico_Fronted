@@ -77,7 +77,7 @@ export interface Horario {
 export interface CrearHorarioRequest {
   fecha: string;
   codMed: string;
-  codEncargado: string;
+  codEncargado?: string;
 }
 
 export interface Disponibilidad {
@@ -93,6 +93,27 @@ export interface CrearDisponibilidadRequest {
   horaInicio: string;
   horaFin: string;
   estado?: string;
+}
+
+export interface CrearDisponibilidadRangoRequest {
+  codHor: number;
+  horaInicio: string;
+  horaFin: string;
+}
+
+export interface SolicitudMedica {
+  idSolicitud: number;
+  medico: Medico;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+}
+
+export interface CrearSolicitudMedicaRequest {
+  codMed: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
 }
 
 export interface Cita {
@@ -115,7 +136,9 @@ export interface Cita {
   providedIn: 'root',
 })
 export class ApiService {
-  private apiUrl = 'https://glistening-achievement-production-3321.up.railway.app/api';
+  private apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8080/api'
+    : 'https://glistening-achievement-production-3321.up.railway.app/api';
 
   constructor(private http: HttpClient) {}
 
@@ -181,6 +204,20 @@ export class ApiService {
 
   crearDisponibilidad(data: CrearDisponibilidadRequest): Observable<Disponibilidad> {
     return this.http.post<Disponibilidad>(`${this.apiUrl}/disponibilidades`, data);
+  }
+
+  crearDisponibilidadesRango(data: CrearDisponibilidadRangoRequest): Observable<Disponibilidad[]> {
+    return this.http.post<Disponibilidad[]>(`${this.apiUrl}/disponibilidades/rango`, data);
+  }
+
+  listarSolicitudesMedicas(codMed?: string): Observable<SolicitudMedica[]> {
+    let params = new HttpParams();
+    if (codMed) params = params.set('codMed', codMed);
+    return this.http.get<SolicitudMedica[]>(`${this.apiUrl}/solicitudes-medicas`, { params });
+  }
+
+  crearSolicitudMedica(data: CrearSolicitudMedicaRequest): Observable<SolicitudMedica> {
+    return this.http.post<SolicitudMedica>(`${this.apiUrl}/solicitudes-medicas`, data);
   }
 
   listarCitasPaciente(numDoc: string): Observable<Cita[]> {

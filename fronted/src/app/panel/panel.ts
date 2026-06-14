@@ -11,6 +11,7 @@ import {
   Horario,
   LoginResponse,
   Medico,
+  SolicitudMedica,
 } from '../Services/api';
 import { AuthService } from '../Services/auth';
 import { GestionarCitas } from '../citas/gestionar-citas/gestionar-citas';
@@ -37,6 +38,7 @@ export class Panel implements OnInit {
   citasPaciente: Cita[] = [];
   citasPendientes: Cita[] = [];
   historial: Cita[] = [];
+  solicitudesMedicas: SolicitudMedica[] = [];
 
   nuevaEspecialidad = '';
   nuevoMedico = {
@@ -64,6 +66,12 @@ export class Panel implements OnInit {
     horaInicio: '',
     horaFin: '',
   };
+  nuevaSolicitud = {
+    fecha: '',
+    horaInicio: '',
+    horaFin: '',
+  };
+  solicitudPreparada: SolicitudMedica | null = null;
 
   get menuItems() {
     const items = [{ label: 'Inicio', action: () => this.cambiarTab('inicio') }];
@@ -74,14 +82,16 @@ export class Panel implements OnInit {
     }
 
     if (this.esMedico()) {
+      items.push({ label: 'Solicitar disponibilidad', action: () => this.cambiarTab('solicitar') });
       items.push({ label: 'Citas pendientes', action: () => this.cambiarTab('pendientes') });
       items.push({ label: 'Historial', action: () => this.cambiarTab('historial') });
     }
 
     if (this.esEncargado()) {
+      items.push({ label: 'Solicitudes medicas', action: () => this.cambiarTab('solicitudes') });
       items.push({ label: 'Especialidades', action: () => this.cambiarTab('especialidades') });
       items.push({ label: 'Medicos', action: () => this.cambiarTab('medicos') });
-      items.push({ label: 'Encargados', action: () => this.cambiarTab('encargados') });
+      items.push({ label: 'Jefes medicos', action: () => this.cambiarTab('encargados') });
       items.push({ label: 'Horarios', action: () => this.cambiarTab('horarios') });
       items.push({ label: 'Disponibilidades', action: () => this.cambiarTab('disponibilidades') });
     }
@@ -127,6 +137,7 @@ export class Panel implements OnInit {
     this.api.listarEncargados().subscribe((data) => (this.encargados = data));
     this.api.listarHorarios().subscribe((data) => (this.horarios = data));
     this.api.listarDisponibilidades().subscribe((data) => (this.disponibilidades = data));
+    this.api.listarSolicitudesMedicas().subscribe((data) => (this.solicitudesMedicas = data));
   }
 
   cargarCitasPaciente(): void {
@@ -146,6 +157,22 @@ export class Panel implements OnInit {
     this.api.historialMedico(this.user.codigo).subscribe({
       next: (data) => (this.historial = data),
       error: (err) => this.mostrarError(err, 'No se pudo cargar el historial'),
+    });
+    this.api.listarSolicitudesMedicas(this.user.codigo).subscribe({
+      next: (data) => (this.solicitudesMedicas = data),
+      error: (err) => this.mostrarError(err, 'No se pudieron cargar las solicitudes medicas'),
+    });
+  }
+
+  crearSolicitudMedica(): void {
+    if (!this.user?.codigo) return;
+    this.api.crearSolicitudMedica({ codMed: this.user.codigo, ...this.nuevaSolicitud }).subscribe({
+      next: () => {
+        this.nuevaSolicitud = { fecha: '', horaInicio: '', horaFin: '' };
+        this.mostrarMensaje('Solicitud enviada al jefe medico');
+        this.cargarCitasMedico();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo registrar la solicitud'),
     });
   }
 
@@ -185,24 +212,49 @@ export class Panel implements OnInit {
 
   crearHorario(): void {
     this.api.crearHorario(this.nuevoHorario).subscribe({
-      next: () => {
+      next: (horario) => {
         this.nuevoHorario = { fecha: '', codMed: '', codEncargado: '' };
         this.mostrarMensaje('Horario creado');
         this.cargarCatalogos();
+        if (this.solicitudPreparada) {
+          this.nuevaDisponibilidad = {
+            codHor: horario.codHor,
+            horaInicio: this.formatoHora(this.solicitudPreparada.horaInicio),
+            horaFin: this.formatoHora(this.solicitudPreparada.horaFin),
+          };
+          this.activeTab = 'disponibilidades';
+        }
       },
       error: (err) => this.mostrarError(err, 'No se pudo crear el horario'),
     });
   }
 
   crearDisponibilidad(): void {
-    this.api.crearDisponibilidad({ ...this.nuevaDisponibilidad, estado: 'DISPONIBLE' }).subscribe({
-      next: () => {
+    this.api.crearDisponibilidadesRango(this.nuevaDisponibilidad).subscribe({
+      next: (disponibilidades) => {
         this.nuevaDisponibilidad = { codHor: 0, horaInicio: '', horaFin: '' };
-        this.mostrarMensaje('Disponibilidad creada');
+        this.solicitudPreparada = null;
+        this.mostrarMensaje(`Se crearon ${disponibilidades.length} bloques de 30 minutos`);
         this.cargarCatalogos();
       },
       error: (err) => this.mostrarError(err, 'No se pudo crear la disponibilidad'),
     });
+  }
+
+  prepararSolicitud(solicitud: SolicitudMedica): void {
+    this.solicitudPreparada = solicitud;
+    this.nuevoHorario = {
+      fecha: solicitud.fecha,
+      codMed: solicitud.medico.codMed,
+      codEncargado: '',
+    };
+    this.nuevaDisponibilidad = {
+      codHor: 0,
+      horaInicio: this.formatoHora(solicitud.horaInicio),
+      horaFin: this.formatoHora(solicitud.horaFin),
+    };
+    this.activeTab = 'horarios';
+    this.mostrarMensaje('Solicitud cargada. Crea el horario y luego se completara el rango de disponibilidad.');
   }
 
   atenderCita(codCita: number): void {
