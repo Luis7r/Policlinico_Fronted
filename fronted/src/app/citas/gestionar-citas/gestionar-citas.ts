@@ -23,6 +23,10 @@ export class GestionarCitas implements OnChanges {
   modalCancelacionAbierto = false;
   citaCancelar: Cita | null = null;
   motivoCancelacion = '';
+  vista: 'cancelar' | 'postergar' = 'postergar';
+  modalPostergarAbierto = false;
+
+citaSeleccionada: Cita | null = null;
 
   constructor(private api: ApiService) {}
 
@@ -41,14 +45,38 @@ export class GestionarCitas implements OnChanges {
     return this.citasOrdenadas.filter((c) => this.puedeModificar(c));
   }
 
-  seleccionarCitaPostergar(): void {
-    this.nuevaDisponibilidad = 0;
-    this.error = '';
-    if (this.citaPostergar) {
-      this.cargarDisponibilidades();
-    } else {
-      this.disponibilidades = [];
+  abrirModalPostergar(cita: Cita): void {
+
+    if (!this.puedeModificar(cita)) {
+      return;
     }
+
+    this.citaSeleccionada = cita;
+
+    this.citaPostergar = cita.codCita;
+
+    this.nuevaDisponibilidad = 0;
+
+    this.modalPostergarAbierto = true;
+
+    this.error = '';
+
+    this.cargarDisponibilidades();
+
+  }
+  
+  cerrarModalPostergar(): void {
+
+    if (this.procesando) return;
+
+    this.modalPostergarAbierto = false;
+
+    this.citaSeleccionada = null;
+
+    this.citaPostergar = 0;
+
+    this.nuevaDisponibilidad = 0;
+
   }
 
   abrirModalCancelacion(cita: Cita): void {
@@ -82,22 +110,67 @@ export class GestionarCitas implements OnChanges {
   }
 
   postergar(): void {
-    if (!this.citaPostergar || !this.nuevaDisponibilidad) {
-      this.error = 'Selecciona la cita y el nuevo horario.';
+
+    if (!this.citaSeleccionada) {
+
+      this.error = 'Seleccione una cita.';
+
       return;
+
+    }
+
+    if (!this.nuevaDisponibilidad) {
+
+      this.error = 'Seleccione un nuevo horario.';
+
+      return;
+
     }
 
     this.procesando = true;
+
     this.error = '';
-    this.api.postergarCita(this.citaPostergar, this.nuevaDisponibilidad).subscribe({
-      next: () => {
-        this.procesando = false;
-        this.citaPostergar = 0;
-        this.nuevaDisponibilidad = 0;
-        this.changed.emit('Cita postergada. Se envio notificacion al correo registrado.');
-      },
-      error: (err) => this.mostrarError(err, 'No se pudo postergar la cita'),
+
+    this.api.postergarCita(
+
+        this.citaSeleccionada.codCita,
+
+        this.nuevaDisponibilidad
+
+    ).subscribe({
+
+        next: () => {
+
+            this.procesando = false;
+
+            this.modalPostergarAbierto = false;
+
+            this.citaSeleccionada = null;
+
+            this.citaPostergar = 0;
+
+            this.nuevaDisponibilidad = 0;
+
+            this.changed.emit(
+
+                'Cita postergada. Se envió notificación al correo registrado.'
+
+            );
+
+        },
+
+        error: (err) =>
+
+            this.mostrarError(
+
+                err,
+
+                'No se pudo postergar la cita'
+
+            )
+
     });
+
   }
 
   puedeModificar(cita: Cita): boolean {
@@ -115,31 +188,63 @@ export class GestionarCitas implements OnChanges {
     return hora?.slice(0, 5) || '';
   }
 
-  disponibilidadLabel(disponibilidad: Disponibilidad): string {
-    const medico = `${disponibilidad.horario.medico.nombre} ${disponibilidad.horario.medico.apellido}`;
-    return `${disponibilidad.horario.fecha} | ${this.formatoHora(disponibilidad.horaInicio)} - ${this.formatoHora(disponibilidad.horaFin)} | ${medico}`;
-  }
 
-  citaSeleccionadaParaPostergar(): Cita | undefined {
-    return this.citasActivas.find((c) => c.codCita === this.citaPostergar);
-  }
+
 
   private cargarDisponibilidades(): void {
-    const cita = this.citaSeleccionadaParaPostergar();
-    if (!cita) return;
+
+    if (!this.citaSeleccionada) {
+
+        return;
+
+    }
 
     this.cargandoDisponibilidades = true;
-    this.api.listarDisponibilidades({ estado: 'DISPONIBLE' }).subscribe({
-      next: (data) => {
-        this.disponibilidades = [...data]
-          .filter((disponibilidad) => disponibilidad.horario.medico.especialidad.nombre === cita.especialidad)
-          .sort((a, b) =>
-            `${a.horario.fecha} ${a.horaInicio}`.localeCompare(`${b.horario.fecha} ${b.horaInicio}`),
-          );
-        this.cargandoDisponibilidades = false;
-      },
-      error: (err) => this.mostrarError(err, 'No se pudieron cargar los horarios disponibles'),
+
+    this.api.listarDisponibilidades({
+
+        estado:'DISPONIBLE'
+
+    }).subscribe({
+
+        next:(data)=>{
+
+            this.disponibilidades=[...data]
+
+            .filter(d=>
+
+                d.horario.medico.especialidad.nombre===
+
+                this.citaSeleccionada!.especialidad
+
+            )
+
+            .sort((a,b)=>
+
+                `${a.horario.fecha} ${a.horaInicio}`
+
+                .localeCompare(
+
+                `${b.horario.fecha} ${b.horaInicio}`)
+
+            );
+
+            this.cargandoDisponibilidades=false;
+
+        },
+
+        error:(err)=>
+
+            this.mostrarError(
+
+                err,
+
+                'No se pudieron cargar los horarios disponibles'
+
+            )
+
     });
+
   }
 
   private mostrarError(err: any, fallback: string): void {

@@ -1,9 +1,10 @@
 .login-page {
   align-items: center;
-  background:
-    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.18), transparent 28%),
-    radial-gradient(circle at 90% 10%, rgba(20, 184, 166, 0.2), transparent 28%),
-    linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%);
+  background-image:
+    linear-gradient(135deg, rgba(189, 193, 203, 0.75), rgba(37, 99, 235, 0.75)),
+    url('/fondo.jpg');
+  background-size: cover;
+  background-position: center;
   display: flex;
   justify-content: center;
   min-height: 100vh;
@@ -23,9 +24,7 @@
 }
 
 .login-brand {
-  background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.92), rgba(11, 111, 179, 0.94)),
-    #0f766e;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -34,17 +33,23 @@
   padding: 42px;
 }
 
-.brand-mark {
+.login-logo {
   align-items: center;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 8px;
   display: inline-flex;
-  font-weight: 900;
-  height: 46px;
+  height: 100%;
   justify-content: center;
-  margin-bottom: 22px;
-  width: 46px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  width: 100%px;
+}
+
+.login-logo img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
 }
 
 .eyebrow {
@@ -79,6 +84,7 @@ h1 {
   flex-direction: column;
   justify-content: center;
   padding: 42px;
+  background: rgb(198, 201, 200);
 }
 
 .login-form-panel header {

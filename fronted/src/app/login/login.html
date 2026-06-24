@@ -1,11 +1,8 @@
 <main class="login-page">
   <section class="login-card">
-    <aside class="login-brand">
-      <span class="brand-mark">PC</span>
-      <p class="eyebrow">Portal de citas</p>
-      <h1>Policlinico</h1>
-      <p>Gestiona tus citas medicas de forma ordenada y segura.</p>
-    </aside>
+      <div class="login-logo" aria-label="Logo de Chorrillos Salud">
+        <img src="/logo.png" alt="Chorrillos Salud" />
+      </div>
 
     <section class="login-form-panel">
       <header>
@@ -21,7 +18,7 @@
             name="correo"
             [(ngModel)]="credenciales.correo"
             required
-            placeholder="tu@correo.com"
+            placeholder="nombre@gmail.com"
           />
         </label>
 
@@ -32,7 +29,7 @@
             name="clave"
             [(ngModel)]="credenciales.clave"
             required
-            placeholder="Tu clave"
+            placeholder="Contraseña"
           />
         </label>
 

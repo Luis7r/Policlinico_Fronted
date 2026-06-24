@@ -1,130 +1,688 @@
 <section class="manage-shell">
+
   <header class="section-header">
+
     <div>
       <p class="eyebrow">Mis citas</p>
       <h1>Gestiona tus citas registradas</h1>
+      <p class="subtitle">
+        Administra fácilmente tus citas médicas.
+      </p>
     </div>
+
+    <div class="tabs-citas">
+
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="vista==='postergar'"
+        (click)="vista='postergar'">
+
+        <i class="bi bi-calendar2-week"></i>
+
+        <span>Postergar</span>
+
+      </button>
+
+      <button
+        type="button"
+        class="tab-button danger"
+        [class.active]="vista==='cancelar'"
+        (click)="vista='cancelar'">
+
+        <i class="bi bi-x-circle"></i>
+
+        <span>Cancelar</span>
+
+      </button>
+
+    </div>
+
   </header>
 
-  <div *ngIf="error" class="alert error">{{ error }}</div>
+  <div
+      *ngIf="error"
+      class="alert error">
 
-  <div class="content-grid">
-    <article class="panel appointments-panel">
-      <div class="panel-title">
-        <h2>Citas del paciente</h2>
-        <p>Desde aqui puedes cancelar citas activas. Para cambiar fecha u hora usa el panel de postergacion.</p>
-      </div>
+      {{error}}
 
-      <div class="table-wrap" *ngIf="citasOrdenadas.length > 0">
-        <table>
-          <thead>
-            <tr>
-              <th>Codigo</th>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Medico</th>
-              <th>Especialidad</th>
-              <th>Estado</th>
-              <th>Accion</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let cita of citasOrdenadas">
-              <td>#{{ cita.codCita }}</td>
-              <td>{{ cita.fecha }}</td>
-              <td>{{ formatoHora(cita.horaInicio) }} - {{ formatoHora(cita.horaFin) }}</td>
-              <td>{{ cita.medico }}</td>
-              <td>{{ cita.especialidad }}</td>
-              <td><span [class]="estadoClase(cita)">{{ cita.estado }}</span></td>
-              <td>
-                <button
-                  type="button"
-                  class="danger-button"
-                  [disabled]="procesando || !puedeModificar(cita)"
-                  (click)="abrirModalCancelacion(cita)"
-                >
-                  Cancelar
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  </div>
 
-      <div *ngIf="citasOrdenadas.length === 0" class="empty-state">
-        Aun no tienes citas registradas.
-      </div>
-    </article>
 
-    <article class="panel postpone-panel">
-      <div class="panel-title">
-        <h2>Postergar cita</h2>
-        <p>Selecciona una cita activa. Los nuevos horarios se filtraran por la misma especialidad.</p>
-      </div>
 
-      <form (ngSubmit)="postergar()" class="postpone-form">
-        <label>
-          Cita activa
-          <select name="citaPostergar" [(ngModel)]="citaPostergar" (change)="seleccionarCitaPostergar()">
-            <option [ngValue]="0">Seleccione una cita</option>
-            <option *ngFor="let cita of citasActivas" [ngValue]="cita.codCita">
-              #{{ cita.codCita }} | {{ cita.especialidad }} | {{ cita.fecha }} | {{ formatoHora(cita.horaInicio) }}
-            </option>
-          </select>
-        </label>
 
-        <label>
-          Nuevo horario
-          <select name="nuevaDisponibilidad" [(ngModel)]="nuevaDisponibilidad" [disabled]="!citaPostergar">
-            <option [ngValue]="0">
-              {{ cargandoDisponibilidades ? 'Cargando horarios...' : 'Seleccione un horario' }}
-            </option>
-            <option *ngFor="let disponibilidad of disponibilidades" [ngValue]="disponibilidad.codDis">
-              {{ disponibilidadLabel(disponibilidad) }}
-            </option>
-          </select>
-        </label>
 
-        <p *ngIf="citaSeleccionadaParaPostergar()" class="filter-note">
-          Mostrando horarios disponibles para: {{ citaSeleccionadaParaPostergar()?.especialidad }}
+<!-- ====================================================== -->
+<!-- ================== VISTA CANCELAR ===================== -->
+<!-- ====================================================== -->
+
+<div *ngIf="vista==='cancelar'">
+
+  <article class="panel appointments-panel">
+
+    <div class="panel-title">
+
+      <div>
+
+        <h2>
+
+          <i class="bi bi-journal-medical"></i>
+
+          Mis citas
+
+        </h2>
+
+        <p>
+
+          Desde aquí podrás cancelar cualquiera de tus citas activas.
+
         </p>
 
-        <button class="primary-button" type="submit" [disabled]="procesando || !citaPostergar || !nuevaDisponibilidad">
-          {{ procesando ? 'Procesando...' : 'Postergar cita' }}
-        </button>
-      </form>
-
-      <div *ngIf="citasActivas.length === 0" class="empty-state compact">
-        No tienes citas activas para postergar.
       </div>
-    </article>
-  </div>
 
-  <div class="modal-backdrop" *ngIf="modalCancelacionAbierto">
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="cancelar-title">
-      <header>
-        <h2 id="cancelar-title">Cancelar cita #{{ citaCancelar?.codCita }}</h2>
-        <p>El motivo es opcional y no se guarda en el backend.</p>
-      </header>
+      <span class="badge-total">
 
-      <label>
-        Motivo de cancelacion
-        <textarea
-          name="motivoCancelacion"
-          [(ngModel)]="motivoCancelacion"
-          rows="4"
-          placeholder="Ej: No podre asistir ese dia"
-        ></textarea>
-      </label>
+        {{citasOrdenadas.length}}
 
-      <div class="modal-actions">
-        <button type="button" class="ghost-button" (click)="cerrarModalCancelacion()" [disabled]="procesando">
-          Volver
-        </button>
-        <button type="button" class="danger-solid-button" (click)="confirmarCancelacion()" [disabled]="procesando">
-          {{ procesando ? 'Cancelando...' : 'Confirmar cancelacion' }}
-        </button>
+        citas
+
+      </span>
+
+    </div>
+
+
+
+    <div
+        class="table-wrap"
+        *ngIf="citasOrdenadas.length>0">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>Código</th>
+
+            <th>Fecha</th>
+
+            <th>Hora</th>
+
+            <th>Médico</th>
+
+            <th>Especialidad</th>
+
+            <th>Estado</th>
+
+            <th></th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let cita of citasOrdenadas">
+
+            <td>
+
+              <strong>
+
+                #{{cita.codCita}}
+
+              </strong>
+
+            </td>
+
+            <td>
+
+              {{cita.fecha}}
+
+            </td>
+
+            <td>
+
+              {{formatoHora(cita.horaInicio)}}
+
+              -
+
+              {{formatoHora(cita.horaFin)}}
+
+            </td>
+
+            <td>
+
+              {{cita.medico}}
+
+            </td>
+
+            <td>
+
+              {{cita.especialidad}}
+
+            </td>
+
+            <td>
+
+              <span [class]="estadoClase(cita)">
+
+                {{cita.estado}}
+
+              </span>
+
+            </td>
+
+            <td>
+
+              <button
+
+                class="danger-button"
+
+                [disabled]="procesando || !puedeModificar(cita)"
+
+                (click)="abrirModalCancelacion(cita)">
+
+                <i class="bi bi-trash3"></i>
+
+                Cancelar
+
+              </button>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div
+        *ngIf="citasOrdenadas.length===0"
+        class="empty-state">
+
+        <i class="bi bi-calendar-x"></i>
+
+        <h3>No tienes citas registradas</h3>
+
+        <p>
+
+          Cuando registres una cita aparecerá aquí.
+
+        </p>
+
+    </div>
+
+  </article>
+
+</div>
+
+
+
+
+
+<!-- ====================================================== -->
+<!-- ================== VISTA POSTERGAR ==================== -->
+<!-- ====================================================== -->
+
+<div *ngIf="vista==='postergar'">
+
+  <article class="panel">
+
+      <div class="panel-title">
+
+          <h2>
+
+              <i class="bi bi-arrow-repeat"></i>
+
+              Selecciona la cita que deseas postergar
+
+          </h2>
+
+          <p>
+
+              Haz clic sobre una tarjeta.
+
+          </p>
+
       </div>
-    </section>
-  </div>
+
+      <div class="cards-citas">
+
+          <div
+              class="card-cita"
+              *ngFor="let cita of citasActivas"
+
+              (click)="abrirModalPostergar(cita)">
+
+              <div class="card-header">
+
+                  <span>
+
+                      #{{cita.codCita}}
+
+                  </span>
+
+                  <span class="estado">
+
+                      {{cita.estado}}
+
+                  </span>
+
+              </div>
+
+              <div class="card-body">
+
+                  <div>
+
+                      <i class="bi bi-calendar-event"></i>
+
+                      {{cita.fecha}}
+
+                  </div>
+
+                  <div>
+
+                      <i class="bi bi-clock-history"></i>
+
+                      {{formatoHora(cita.horaInicio)}}
+
+                      -
+
+                      {{formatoHora(cita.horaFin)}}
+
+                  </div>
+
+                  <div>
+
+                      <i class="bi bi-person-badge"></i>
+
+                      {{cita.medico}}
+
+                  </div>
+
+                  <div>
+
+                      <i class="bi bi-hospital"></i>
+
+                      {{cita.especialidad}}
+
+                  </div>
+
+              </div>
+
+              <button class="primary-button">
+
+                  Elegir nueva fecha
+
+              </button>
+
+          </div>
+
+      </div>
+            <div
+        *ngIf="citasActivas.length === 0"
+        class="empty-state">
+
+        <i class="bi bi-calendar-x"></i>
+
+        <h3>No tienes citas activas</h3>
+
+        <p>
+          Actualmente no existen citas que puedan ser postergadas.
+        </p>
+
+      </div>
+
+  </article>
+
+</div>
+
+<!-- ====================================================== -->
+<!-- =============== MODAL POSTERGAR ======================= -->
+<!-- ====================================================== -->
+
+<div
+  class="modal-backdrop"
+  *ngIf="modalPostergarAbierto">
+
+  <section
+    class="modal modal-postergar">
+
+    <header class="modal-header">
+
+      <div>
+
+        <h2>
+
+          <i class="bi bi-arrow-repeat"></i>
+
+          Postergar cita
+
+        </h2>
+
+        <p>
+
+          Selecciona un nuevo horario disponible.
+
+        </p>
+
+      </div>
+
+      <button
+        class="close-button"
+        (click)="cerrarModalPostergar()">
+
+        <i class="bi bi-x-lg"></i>
+
+      </button>
+
+    </header>
+
+
+
+
+
+    <div class="resumen-cita">
+
+      <div>
+
+        <span class="titulo">
+
+          Cita actual
+
+        </span>
+
+      </div>
+
+      <div class="info-grid">
+
+        <div>
+
+          <i class="bi bi-calendar-event"></i>
+
+          {{ citaSeleccionada?.fecha }}
+
+        </div>
+
+        <div>
+
+          <i class="bi bi-clock"></i>
+
+          {{ formatoHora(citaSeleccionada?.horaInicio || '') }}
+
+          -
+
+          {{ formatoHora(citaSeleccionada?.horaFin || '') }}
+
+        </div>
+
+        <div>
+
+          <i class="bi bi-person-badge"></i>
+
+          {{ citaSeleccionada?.medico }}
+
+        </div>
+
+        <div>
+
+          <i class="bi bi-hospital"></i>
+
+          {{ citaSeleccionada?.especialidad }}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+
+
+    <div
+      *ngIf="cargandoDisponibilidades"
+      class="loading-state">
+
+      <div class="spinner"></div>
+
+      Cargando horarios...
+
+    </div>
+
+
+
+
+
+    <div
+      class="horarios-grid"
+      *ngIf="!cargandoDisponibilidades">
+
+      <div
+
+        class="horario-card"
+
+        *ngFor="let disponibilidad of disponibilidades"
+
+        [class.selected]="
+            nuevaDisponibilidad===disponibilidad.codDis
+        "
+
+        (click)="nuevaDisponibilidad=disponibilidad.codDis">
+
+        <div class="fecha">
+
+          <i class="bi bi-calendar3"></i>
+
+          {{ disponibilidad.horario.fecha }}
+
+        </div>
+
+        <div class="hora">
+
+          {{ formatoHora(disponibilidad.horaInicio) }}
+
+          -
+
+          {{ formatoHora(disponibilidad.horaFin) }}
+
+        </div>
+
+        <div class="doctor">
+
+          <i class="bi bi-person-vcard"></i>
+
+          {{ disponibilidad.horario.medico.nombre }}
+
+          {{ disponibilidad.horario.medico.apellido }}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+
+
+    <div
+      *ngIf="
+        !cargandoDisponibilidades &&
+        disponibilidades.length===0
+      "
+      class="empty-state">
+
+      <i class="bi bi-calendar-x"></i>
+
+      <h3>
+
+        No existen horarios disponibles
+
+      </h3>
+
+      <p>
+
+        Intenta nuevamente más tarde.
+
+      </p>
+
+    </div>
+
+
+
+
+
+    <footer class="modal-footer">
+
+      <button
+
+        class="ghost-button"
+
+        (click)="cerrarModalPostergar()">
+
+        Cancelar
+
+      </button>
+
+      <button
+
+        class="primary-button"
+
+        [disabled]="
+          !nuevaDisponibilidad ||
+          procesando
+        "
+
+        (click)="postergar()">
+
+        <i class="bi bi-check-circle"></i>
+
+        {{procesando ? 'Procesando...' : 'Confirmar cambio'}}
+
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>
+
+<!-- ====================================================== -->
+<!-- ============== MODAL CANCELACIÓN ====================== -->
+<!-- ====================================================== -->
+
+<div
+  class="modal-backdrop"
+  *ngIf="modalCancelacionAbierto">
+
+  <section class="modal modal-cancelar">
+
+    <header class="modal-header">
+
+      <div>
+
+        <h2>
+          <i class="bi bi-trash3"></i>
+          Cancelar cita
+        </h2>
+
+        <p>
+          Esta acción cancelará definitivamente la cita seleccionada.
+        </p>
+
+      </div>
+
+      <button
+        class="close-button"
+        (click)="cerrarModalCancelacion()">
+
+        <i class="bi bi-x-lg"></i>
+
+      </button>
+
+    </header>
+
+    <div class="resumen-cita">
+
+      <span class="titulo">
+        Información de la cita
+      </span>
+
+      <div class="info-grid">
+
+        <div>
+          <i class="bi bi-calendar-event"></i>
+          {{ citaCancelar?.fecha }}
+        </div>
+
+        <div>
+          <i class="bi bi-clock"></i>
+          {{ formatoHora(citaCancelar?.horaInicio || '') }}
+          -
+          {{ formatoHora(citaCancelar?.horaFin || '') }}
+        </div>
+
+        <div>
+          <i class="bi bi-person-badge"></i>
+          {{ citaCancelar?.medico }}
+        </div>
+
+        <div>
+          <i class="bi bi-hospital"></i>
+          {{ citaCancelar?.especialidad }}
+        </div>
+
+      </div>
+
+    </div>
+
+    <label>
+
+      Motivo de cancelación
+
+      <textarea
+
+        rows="4"
+
+        name="motivoCancelacion"
+
+        [(ngModel)]="motivoCancelacion"
+
+        placeholder="Escriba un motivo (opcional)">
+
+      </textarea>
+
+    </label>
+
+    <footer class="modal-footer">
+
+      <button
+        class="ghost-button"
+        (click)="cerrarModalCancelacion()"
+        [disabled]="procesando">
+
+        Cancelar
+
+      </button>
+
+      <button
+        class="danger-solid-button"
+        (click)="confirmarCancelacion()"
+        [disabled]="procesando">
+
+        <i class="bi bi-trash3"></i>
+
+        {{ procesando ? 'Cancelando...' : 'Confirmar cancelación' }}
+
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>
+
 </section>
