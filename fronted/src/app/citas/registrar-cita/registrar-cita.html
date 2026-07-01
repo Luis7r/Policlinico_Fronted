@@ -101,6 +101,7 @@
           {{ formatoHora(disponibilidad.horaInicio) }} - {{ formatoHora(disponibilidad.horaFin) }}
         </span>
         <span class="option-meta">Cod. disponibilidad {{ disponibilidad.codDis }}</span>
+        <span class="option-meta">Consultorio {{ disponibilidad.horario.consultorio || '-' }}</span>
       </button>
     </div>
 
@@ -139,6 +140,10 @@
           {{ formatoHora(disponibilidadSeleccionada.horaInicio) }} -
           {{ formatoHora(disponibilidadSeleccionada.horaFin) }}
         </dd>
+      </div>
+      <div>
+        <dt>Consultorio</dt>
+        <dd>{{ disponibilidadSeleccionada.horario.consultorio || '-' }}</dd>
       </div>
     </dl>
 

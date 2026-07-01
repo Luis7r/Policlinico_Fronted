@@ -72,12 +72,14 @@ export interface Horario {
   fecha: string;
   medico: Medico;
   encargadoCitas?: EncargadoCitas;
+  consultorio?: string;
 }
 
 export interface CrearHorarioRequest {
   fecha: string;
   codMed: string;
   codEncargado?: string;
+  consultorio?: string;
 }
 
 export interface Disponibilidad {
@@ -99,6 +101,26 @@ export interface CrearDisponibilidadRangoRequest {
   codHor: number;
   horaInicio: string;
   horaFin: string;
+  duracionMinutos?: number;
+}
+
+export interface RangoDiaRequest {
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+}
+
+export interface CrearDisponibilidadMasivaRequest {
+  codMed: string;
+  codEncargado?: string;
+  consultorio?: string;
+  fechaInicio: string;
+  fechaFin: string;
+  mismaHora: boolean;
+  horaInicio?: string;
+  horaFin?: string;
+  duracionMinutos?: number;
+  dias?: RangoDiaRequest[];
 }
 
 export interface SolicitudMedica {
@@ -116,6 +138,16 @@ export interface CrearSolicitudMedicaRequest {
   horaFin: string;
 }
 
+export interface CrearSolicitudMedicaRangoRequest {
+  codMed: string;
+  fechaInicio: string;
+  fechaFin: string;
+  mismaHora: boolean;
+  horaInicio?: string;
+  horaFin?: string;
+  dias?: RangoDiaRequest[];
+}
+
 export interface Cita {
   codCita: number;
   estado: string;
@@ -129,6 +161,7 @@ export interface Cita {
   codMed: string;
   medico: string;
   especialidad: string;
+  consultorio?: string;
   notificacionEnviada: boolean | null;
 }
 
@@ -194,10 +227,20 @@ export class ApiService {
     return this.http.post<Horario>(`${this.apiUrl}/horarios`, data);
   }
 
-  listarDisponibilidades(filtros?: { estado?: string; fecha?: string; codMed?: string }): Observable<Disponibilidad[]> {
+  listarDisponibilidades(filtros?: {
+    estado?: string;
+    fecha?: string;
+    fechaInicio?: string;
+    fechaFin?: string;
+    incluirPasadas?: boolean;
+    codMed?: string;
+  }): Observable<Disponibilidad[]> {
     let params = new HttpParams();
     if (filtros?.estado) params = params.set('estado', filtros.estado);
     if (filtros?.fecha) params = params.set('fecha', filtros.fecha);
+    if (filtros?.fechaInicio) params = params.set('fechaInicio', filtros.fechaInicio);
+    if (filtros?.fechaFin) params = params.set('fechaFin', filtros.fechaFin);
+    if (filtros?.incluirPasadas !== undefined) params = params.set('incluirPasadas', filtros.incluirPasadas);
     if (filtros?.codMed) params = params.set('codMed', filtros.codMed);
     return this.http.get<Disponibilidad[]>(`${this.apiUrl}/disponibilidades`, { params });
   }
@@ -210,6 +253,10 @@ export class ApiService {
     return this.http.post<Disponibilidad[]>(`${this.apiUrl}/disponibilidades/rango`, data);
   }
 
+  crearDisponibilidadesMasivas(data: CrearDisponibilidadMasivaRequest): Observable<Disponibilidad[]> {
+    return this.http.post<Disponibilidad[]>(`${this.apiUrl}/disponibilidades/masivo`, data);
+  }
+
   listarSolicitudesMedicas(codMed?: string): Observable<SolicitudMedica[]> {
     let params = new HttpParams();
     if (codMed) params = params.set('codMed', codMed);
@@ -218,6 +265,10 @@ export class ApiService {
 
   crearSolicitudMedica(data: CrearSolicitudMedicaRequest): Observable<SolicitudMedica> {
     return this.http.post<SolicitudMedica>(`${this.apiUrl}/solicitudes-medicas`, data);
+  }
+
+  crearSolicitudesMedicasRango(data: CrearSolicitudMedicaRangoRequest): Observable<SolicitudMedica[]> {
+    return this.http.post<SolicitudMedica[]>(`${this.apiUrl}/solicitudes-medicas/rango`, data);
   }
 
   listarCitasPaciente(numDoc: string): Observable<Cita[]> {

@@ -1,171 +1,86 @@
 <div class="layout">
+  <div *ngIf="isOpen" class="overlay" (click)="toggleSidebar()"></div>
 
-  <!-- Overlay para móviles -->
-  <div
-    *ngIf="isOpen"
-    class="overlay"
-    (click)="toggleSidebar()">
-  </div>
-
-  <!-- Sidebar -->
   <aside class="sidebar" [class.open]="isOpen">
-
-    <!-- Encabezado -->
     <div class="sidebar-header">
-
       <div class="brand-logo">
-        <img src="/logo2.png" alt="Logo Policlínico">
+        <img src="/logo2.png" alt="Logo Policlinico">
       </div>
 
       <div class="brand-info">
-        <h2>Policlínico</h2>
+        <h2>Policlinico</h2>
         <p>Chorrillos Salud</p>
       </div>
-
     </div>
 
-    <!-- Información del usuario -->
     <section class="user-card">
-
       <div class="user-avatar">
         <i class="bi bi-person-fill"></i>
       </div>
 
-      <h3>{{ displayName() }}</h3>
-
-      <span class="user-role">
-        {{ userInfo?.rol || 'ROL' }}
-      </span>
-
-      <small>
-        Código: {{ displayCode() }}
-      </small>
-
+      <div class="user-copy">
+        <h3>{{ displayName() }}</h3>
+        <span class="user-role">{{ userInfo?.rol || 'ROL' }}</span>
+        <small>Codigo: {{ displayCode() }}</small>
+      </div>
     </section>
 
-    <!-- Menú -->
-    <nav class="menu" aria-label="Navegación principal">
-
+    <nav class="menu" aria-label="Navegacion principal">
       <button
         *ngFor="let item of menuItems"
         type="button"
         class="menu-item"
         (click)="handleMenuClick(item)">
-
         <i
           class="bi"
           [ngClass]="{
-
-            'bi-house-door-fill':
-              item.label === 'Inicio',
-
-            'bi-calendar-plus-fill':
-              item.label === 'Registrar cita',
-
-            'bi-calendar-check-fill':
-              item.label === 'Gestionar citas' ||
-              item.label === 'Mis citas',
-
-            'bi-envelope-paper-fill':
-              item.label === 'Solicitar disponibilidad',
-
-            'bi-hourglass-split':
-              item.label === 'Citas pendientes',
-
-            'bi-clock-history':
-              item.label === 'Historial',
-
-            'bi-heart-pulse-fill':
-              item.label === 'Especialidades',
-
-            'bi-person-badge-fill':
-              item.label === 'Registrar medico' ||
-              item.label === 'Médicos',
-
-            'bi-person-workspace':
-              item.label === 'Registrar jefe medico' ||
-              item.label === 'Jefes médicos',
-
-            'bi-calendar-week-fill':
-              item.label === 'Horarios',
-
-            'bi-clock-fill':
-              item.label === 'Disponibilidades',
-
-            'bi-file-earmark-medical-fill':
-              item.label === 'Solicitudes'
-
+            'bi-house-door-fill': item.label === 'Inicio',
+            'bi-calendar-plus-fill': item.label === 'Registrar cita',
+            'bi-calendar-check-fill': item.label === 'Gestionar citas' || item.label === 'Mis citas',
+            'bi-envelope-paper-fill': item.label === 'Solicitar disponibilidad',
+            'bi-calendar-week-fill': item.label === 'Horarios semana' || item.label === 'Horarios',
+            'bi-hourglass-split': item.label === 'Citas pendientes',
+            'bi-clock-history': item.label === 'Historial',
+            'bi-heart-pulse-fill': item.label === 'Especialidades',
+            'bi-person-badge-fill': item.label === 'Medicos',
+            'bi-person-workspace': item.label === 'Jefes medicos',
+            'bi-clock-fill': item.label === 'Disponibilidades',
+            'bi-file-earmark-medical-fill': item.label === 'Solicitudes medicas'
           }">
         </i>
 
-        <span>
-          {{ item.label }}
-        </span>
-
+        <span>{{ item.label }}</span>
       </button>
-
     </nav>
 
-    <!-- Footer -->
     <div class="sidebar-footer">
-
-      <button
-        type="button"
-        class="logout-button"
-        (click)="handleLogout()">
-
+      <button type="button" class="logout-button" (click)="handleLogout()">
         <i class="bi bi-box-arrow-right"></i>
-
-        <span>Cerrar sesión</span>
-
+        <span>Cerrar sesion</span>
       </button>
-
     </div>
-
   </aside>
 
-  <!-- Contenido -->
   <section class="content-area">
-
     <header class="topbar">
-
-      <button
-        type="button"
-        class="menu-toggle"
-        (click)="toggleSidebar()">
-
+      <button type="button" class="menu-toggle" (click)="toggleSidebar()">
         <i class="bi bi-list"></i>
-
       </button>
 
       <div class="topbar-info">
-
-        <h2>
-          {{ pageTitle }}
-        </h2>
-
-        <p>
-
+        <p class="topbar-eyebrow">Sistema de citas medicas</p>
+        <h2>{{ pageTitle }}</h2>
+        <p class="topbar-user">
           <i class="bi bi-person-circle"></i>
-
           {{ displayName() }}
-
           <span>|</span>
-
           {{ userInfo?.rol }}
-
         </p>
-
       </div>
-
     </header>
 
     <main class="page-content">
-
       <ng-content></ng-content>
-
     </main>
-
   </section>
-
 </div>
