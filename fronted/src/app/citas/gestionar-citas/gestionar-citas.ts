@@ -2,6 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Cita, Disponibilidad } from '../../Services/api';
+import {
+  descargarComprobantePdf,
+  formatoMoneda,
+  precioPorEspecialidad,
+} from '../../Services/comprobante';
 
 @Component({
   selector: 'app-gestionar-citas',
@@ -23,6 +28,11 @@ export class GestionarCitas implements OnChanges {
   modalCancelacionAbierto = false;
   citaCancelar: Cita | null = null;
   motivoCancelacion = '';
+  motivosCancelacion = [
+    'Motivos personales',
+    'No podre asistir en la fecha programada',
+    'Deseo atenderme en otro establecimiento',
+  ];
   vista: 'cancelar' | 'postergar' = 'postergar';
   modalPostergarAbierto = false;
 
@@ -43,6 +53,10 @@ citaSeleccionada: Cita | null = null;
 
   get citasActivas(): Cita[] {
     return this.citasOrdenadas.filter((c) => this.puedeModificar(c));
+  }
+
+  get citasCancelables(): Cita[] {
+    return this.citasActivas;
   }
 
   abrirModalPostergar(cita: Cita): void {
@@ -99,11 +113,13 @@ citaSeleccionada: Cita | null = null;
 
     this.procesando = true;
     this.error = '';
-    this.api.cancelarCita(this.citaCancelar.codCita).subscribe({
+    const citaOriginal = this.citaCancelar;
+    this.api.cancelarCita(citaOriginal.codCita, this.motivoCancelacion).subscribe({
       next: () => {
         this.procesando = false;
+        this.descargarNotaCredito(citaOriginal, this.motivoCancelacion);
         this.cerrarModalCancelacion();
-        this.changed.emit('Cita cancelada. Se envio notificacion al correo registrado.');
+        this.changed.emit('Cita cancelada. Nota de credito descargada y notificacion enviada al correo registrado.');
       },
       error: (err) => this.mostrarError(err, 'No se pudo cancelar la cita'),
     });
@@ -188,6 +204,14 @@ citaSeleccionada: Cita | null = null;
     return hora?.slice(0, 5) || '';
   }
 
+  montoCita(cita: Cita | null): number {
+    return precioPorEspecialidad(cita?.especialidad);
+  }
+
+  montoCitaTexto(cita: Cita | null): string {
+    return formatoMoneda(this.montoCita(cita));
+  }
+
 
 
 
@@ -251,5 +275,23 @@ citaSeleccionada: Cita | null = null;
     this.procesando = false;
     this.cargandoDisponibilidades = false;
     this.error = err?.error?.error || err?.error?.message || fallback;
+  }
+
+  private descargarNotaCredito(cita: Cita, motivo: string): void {
+    descargarComprobantePdf(
+      'Nota de credito',
+      `Devolucion por cita #${cita.codCita}`,
+      [
+        { label: 'Paciente', value: cita.paciente },
+        { label: 'Especialidad', value: cita.especialidad },
+        { label: 'Medico', value: cita.medico },
+        { label: 'Fecha original', value: cita.fecha },
+        { label: 'Hora original', value: `${this.formatoHora(cita.horaInicio)} - ${this.formatoHora(cita.horaFin)}` },
+        { label: 'Consultorio', value: cita.consultorio || '-' },
+        { label: 'Motivo de cancelacion', value: motivo },
+        { label: 'Monto devuelto', value: this.montoCitaTexto(cita) },
+      ],
+      `nota-credito-cita-${cita.codCita}.pdf`
+    );
   }
 }

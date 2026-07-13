@@ -865,3 +865,35 @@ select:disabled {
 
     transform:none !important;
 }
+
+.modal-cancelar > label{
+    display:none;
+}
+
+.motivos-panel{
+    display:grid;
+    gap:10px;
+}
+
+.motivos-panel > span{
+    color:#334155;
+    font-size:13px;
+    font-weight:900;
+}
+
+.motivos-panel label{
+    align-items:center;
+    background:#f8fafc;
+    border:1px solid #d8e0ea;
+    border-radius:12px;
+    cursor:pointer;
+    display:flex;
+    gap:10px;
+    padding:12px 14px;
+}
+
+.motivos-panel label.selected{
+    background:#ecfdf5;
+    border-color:#0f766e;
+    color:#0f766e;
+}

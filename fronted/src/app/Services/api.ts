@@ -279,8 +279,8 @@ export class ApiService {
     return this.http.post<Cita>(`${this.apiUrl}/citas`, { numDoc, codDis });
   }
 
-  cancelarCita(codCita: number): Observable<Cita> {
-    return this.http.put<Cita>(`${this.apiUrl}/citas/${codCita}/cancelar`, {});
+  cancelarCita(codCita: number, motivo?: string): Observable<Cita> {
+    return this.http.put<Cita>(`${this.apiUrl}/citas/${codCita}/cancelar`, { motivo });
   }
 
   postergarCita(codCita: number, nuevoCodDis: number): Observable<Cita> {

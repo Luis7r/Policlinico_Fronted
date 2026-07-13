@@ -2,6 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Disponibilidad, Especialidad, Medico } from '../../Services/api';
+import {
+  descargarComprobantePdf,
+  formatoMoneda,
+  precioPorEspecialidad,
+} from '../../Services/comprobante';
 
 @Component({
   selector: 'app-registrar-cita',
@@ -27,6 +32,9 @@ export class RegistrarCita implements OnInit {
   cargandoDisponibilidades = false;
   guardando = false;
   error = '';
+  metodoPago: 'tarjeta' | 'qr' = 'tarjeta';
+  numeroTarjeta = '';
+  pagoQrConfirmado = false;
 
   constructor(private api: ApiService) {}
 
@@ -97,11 +105,16 @@ export class RegistrarCita implements OnInit {
 
   seleccionarDisponibilidad(disponibilidad: Disponibilidad): void {
     this.disponibilidadSeleccionada = disponibilidad;
+    this.limpiarPago();
   }
 
   registrar(): void {
     if (!this.pacienteCodigo || !this.disponibilidadSeleccionada) {
       this.error = 'Selecciona una cita disponible antes de registrar.';
+      return;
+    }
+    if (!this.pagoValido()) {
+      this.error = 'Completa la simulacion de pago antes de registrar.';
       return;
     }
 
@@ -110,6 +123,7 @@ export class RegistrarCita implements OnInit {
     this.api.registrarCita(this.pacienteCodigo, this.disponibilidadSeleccionada.codDis).subscribe({
       next: (cita) => {
         this.guardando = false;
+        this.descargarComprobantePago(cita.codCita);
         const notificacion = cita.notificacionEnviada ? 'Correo enviado' : 'Cita registrada';
         this.completed.emit(`${notificacion}. Codigo de cita: ${cita.codCita}`);
         this.reiniciar();
@@ -143,13 +157,62 @@ export class RegistrarCita implements OnInit {
     return hora?.slice(0, 5) || '';
   }
 
+  montoCita(): number {
+    return precioPorEspecialidad(this.especialidadSeleccionada?.nombre);
+  }
+
+  montoCitaTexto(): string {
+    return formatoMoneda(this.montoCita());
+  }
+
+  pagoValido(): boolean {
+    if (this.metodoPago === 'qr') {
+      return this.pagoQrConfirmado;
+    }
+    return /^\d{16}$/.test(this.numeroTarjeta.trim());
+  }
+
+  tarjetaOculta(): string {
+    const limpia = this.numeroTarjeta.replace(/\D/g, '');
+    return limpia.length >= 4 ? `**** **** **** ${limpia.slice(-4)}` : '-';
+  }
+
   private reiniciar(): void {
     this.especialidadSeleccionada = null;
     this.medicoSeleccionado = null;
     this.disponibilidadSeleccionada = null;
     this.medicos = [];
     this.disponibilidades = [];
+    this.limpiarPago();
     this.cargarEspecialidades();
+  }
+
+  private limpiarPago(): void {
+    this.metodoPago = 'tarjeta';
+    this.numeroTarjeta = '';
+    this.pagoQrConfirmado = false;
+  }
+
+  private descargarComprobantePago(codCita: number): void {
+    if (!this.disponibilidadSeleccionada) return;
+    descargarComprobantePdf(
+      'Comprobante de pago',
+      `Cita #${codCita}`,
+      [
+        { label: 'Paciente', value: this.pacienteCodigo },
+        { label: 'Especialidad', value: this.especialidadSeleccionada?.nombre },
+        { label: 'Medico', value: `${this.medicoSeleccionado?.nombre || ''} ${this.medicoSeleccionado?.apellido || ''}`.trim() },
+        { label: 'Fecha', value: this.disponibilidadSeleccionada.horario.fecha },
+        {
+          label: 'Hora',
+          value: `${this.formatoHora(this.disponibilidadSeleccionada.horaInicio)} - ${this.formatoHora(this.disponibilidadSeleccionada.horaFin)}`,
+        },
+        { label: 'Consultorio', value: this.disponibilidadSeleccionada.horario.consultorio || '-' },
+        { label: 'Metodo de pago', value: this.metodoPago === 'tarjeta' ? `Tarjeta ${this.tarjetaOculta()}` : 'QR demo' },
+        { label: 'Monto pagado', value: this.montoCitaTexto() },
+      ],
+      `comprobante-cita-${codCita}.pdf`
+    );
   }
 
   private ordenarDisponibilidades(data: Disponibilidad[]): Disponibilidad[] {

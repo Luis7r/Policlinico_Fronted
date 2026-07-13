@@ -82,7 +82,7 @@
 
       <span class="badge-total">
 
-        {{citasOrdenadas.length}}
+        {{citasCancelables.length}}
 
         citas
 
@@ -94,7 +94,7 @@
 
     <div
         class="table-wrap"
-        *ngIf="citasOrdenadas.length>0">
+        *ngIf="citasCancelables.length>0">
 
       <table>
 
@@ -122,7 +122,7 @@
 
         <tbody>
 
-          <tr *ngFor="let cita of citasOrdenadas">
+          <tr *ngFor="let cita of citasCancelables">
 
             <td>
 
@@ -199,16 +199,16 @@
     </div>
 
     <div
-        *ngIf="citasOrdenadas.length===0"
+        *ngIf="citasCancelables.length===0"
         class="empty-state">
 
         <i class="bi bi-calendar-x"></i>
 
-        <h3>No tienes citas registradas</h3>
+        <h3>No tienes citas pendientes o postergadas</h3>
 
         <p>
 
-          Cuando registres una cita aparecerá aquí.
+          Las citas canceladas o atendidas ya no se muestran para cancelar.
 
         </p>
 
@@ -635,8 +635,21 @@
           {{ citaCancelar?.especialidad }}
         </div>
 
+        <div>
+          <i class="bi bi-cash-coin"></i>
+          Devolucion simulada: {{ montoCitaTexto(citaCancelar) }}
+        </div>
+
       </div>
 
+    </div>
+
+    <div class="motivos-panel">
+      <span>Motivo de cancelacion</span>
+      <label *ngFor="let motivo of motivosCancelacion" [class.selected]="motivoCancelacion===motivo">
+        <input type="radio" name="motivoCancelacion" [value]="motivo" [(ngModel)]="motivoCancelacion" />
+        {{ motivo }}
+      </label>
     </div>
 
     <label>
@@ -671,7 +684,7 @@
       <button
         class="danger-solid-button"
         (click)="confirmarCancelacion()"
-        [disabled]="procesando">
+        [disabled]="procesando || !motivoCancelacion">
 
         <i class="bi bi-trash3"></i>
 

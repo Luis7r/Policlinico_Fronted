@@ -145,9 +145,55 @@
         <dt>Consultorio</dt>
         <dd>{{ disponibilidadSeleccionada.horario.consultorio || '-' }}</dd>
       </div>
+      <div>
+        <dt>Monto</dt>
+        <dd>{{ montoCitaTexto() }}</dd>
+      </div>
     </dl>
 
-    <button class="primary-button" type="button" (click)="registrar()" [disabled]="guardando">
+    <section class="payment-panel">
+      <div class="payment-heading">
+        <h3>Pago simulado</h3>
+        <strong>{{ montoCitaTexto() }}</strong>
+      </div>
+
+      <div class="payment-methods">
+        <label [class.selected]="metodoPago === 'tarjeta'">
+          <input type="radio" name="metodoPago" value="tarjeta" [(ngModel)]="metodoPago" />
+          Tarjeta
+        </label>
+        <label [class.selected]="metodoPago === 'qr'">
+          <input type="radio" name="metodoPago" value="qr" [(ngModel)]="metodoPago" />
+          QR demo
+        </label>
+      </div>
+
+      <label class="payment-field" *ngIf="metodoPago === 'tarjeta'">
+        Numero de tarjeta
+        <input
+          name="numeroTarjeta"
+          inputmode="numeric"
+          maxlength="16"
+          [(ngModel)]="numeroTarjeta"
+          placeholder="Acepta cualquier tarjeta de 16 digitos"
+        />
+      </label>
+
+      <div class="qr-box" *ngIf="metodoPago === 'qr'">
+        <div class="fake-qr" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <label class="qr-confirm">
+          <input type="checkbox" name="pagoQrConfirmado" [(ngModel)]="pagoQrConfirmado" />
+          Pago QR confirmado para demostracion
+        </label>
+      </div>
+    </section>
+
+    <button class="primary-button" type="button" (click)="registrar()" [disabled]="guardando || !pagoValido()">
       {{ guardando ? 'Registrando...' : 'Registrar cita' }}
     </button>
   </article>
