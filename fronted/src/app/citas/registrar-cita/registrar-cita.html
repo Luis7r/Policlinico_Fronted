@@ -80,7 +80,7 @@
     <div class="filter-bar">
       <label>
         Filtrar por fecha
-        <input type="date" name="fechaFiltro" [(ngModel)]="fechaFiltro" (change)="cargarDisponibilidades()" />
+        <input type="date" name="fechaFiltro" [(ngModel)]="fechaFiltro" (change)="cargarDisponibilidades()" [min]="obtenerFechaMinima()" />
       </label>
       <button class="ghost-button" type="button" (click)="limpiarFechaFiltro()" [disabled]="!fechaFiltro">
         Limpiar filtro

@@ -16,6 +16,7 @@ import {
 import { AuthService } from '../Services/auth';
 import { GestionarCitas } from '../citas/gestionar-citas/gestionar-citas';
 import { RegistrarCita } from '../citas/registrar-cita/registrar-cita';
+import { descargarComprobantePdf } from '../Services/comprobante';
 import { Sidebar } from '../sidebar/sidebar';
 
 type RangoDiaForm = {
@@ -28,11 +29,18 @@ type SolicitudMedicaGrupo = {
   clave: string;
   solicitudes: SolicitudMedica[];
   medico: Medico;
+  estado: 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO';
   fechaInicio: string;
   fechaFin: string;
   fechas: string[];
   horaInicio: string;
   horaFin: string;
+};
+
+type DiaAgenda = {
+  fecha: string;
+  etiqueta: string;
+  dia: string;
 };
 
 @Component({
@@ -56,8 +64,15 @@ export class Panel implements OnInit {
   citasPendientes: Cita[] = [];
   historial: Cita[] = [];
   solicitudesMedicas: SolicitudMedica[] = [];
+  filtrosSolicitudes = {
+    estado: 'PENDIENTE' as 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO' | '',
+    codEspe: 0,
+    codMed: '',
+  };
   horariosSemanaMedico: Disponibilidad[] = [];
   fechaSemanaMedico = this.fechaLocal(new Date());
+  fechaReportePendientes = '';
+  citaDetalle: Cita | null = null;
 
   nuevaEspecialidad = '';
   nuevoMedico = {
@@ -103,6 +118,7 @@ export class Panel implements OnInit {
   };
   solicitudPreparada: SolicitudMedica | null = null;
   solicitudGrupoPreparada: SolicitudMedicaGrupo | null = null;
+  fechasSeleccionadasPorGrupo: Record<string, string[]> = {};
 
   get menuItems() {
     const items = [{ label: 'Inicio', action: () => this.cambiarTab('inicio') }];
@@ -137,6 +153,7 @@ export class Panel implements OnInit {
     this.solicitudesMedicas.forEach((solicitud) => {
       const clave = [
         solicitud.medico.codMed,
+        solicitud.estado,
         this.formatoHora(solicitud.horaInicio),
         this.formatoHora(solicitud.horaFin),
       ].join('|');
@@ -184,6 +201,9 @@ export class Panel implements OnInit {
     if (tab === 'horarios-medico') {
       this.cargarHorariosSemanaMedico();
     }
+    if (tab === 'solicitudes') {
+      this.cargarSolicitudesMedicas();
+    }
   }
 
   cargarDatosBase(): void {
@@ -208,7 +228,20 @@ export class Panel implements OnInit {
     this.api.listarEncargados().subscribe((data) => (this.encargados = data));
     this.api.listarHorarios().subscribe((data) => (this.horarios = data));
     this.api.listarDisponibilidades().subscribe((data) => (this.disponibilidades = data));
-    this.api.listarSolicitudesMedicas().subscribe((data) => (this.solicitudesMedicas = data));
+    this.cargarSolicitudesMedicas();
+  }
+
+  cargarSolicitudesMedicas(): void {
+    this.api
+      .listarSolicitudesMedicas({
+        estado: this.filtrosSolicitudes.estado,
+        codEspe: this.filtrosSolicitudes.codEspe || undefined,
+        codMed: this.filtrosSolicitudes.codMed || undefined,
+      })
+      .subscribe({
+        next: (data) => (this.solicitudesMedicas = data),
+        error: (err) => this.mostrarError(err, 'No se pudieron cargar las solicitudes medicas'),
+      });
   }
 
   cargarCitasPaciente(): void {
@@ -222,14 +255,17 @@ export class Panel implements OnInit {
   cargarCitasMedico(): void {
     if (!this.user?.codigo) return;
     this.api.citasPendientesMedico(this.user.codigo).subscribe({
-      next: (data) => (this.citasPendientes = data),
+      next: (data) => {
+        this.citasPendientes = data;
+        this.sincronizarFechaReportePendientes();
+      },
       error: (err) => this.mostrarError(err, 'No se pudieron cargar las citas pendientes'),
     });
     this.api.historialMedico(this.user.codigo).subscribe({
       next: (data) => (this.historial = data),
       error: (err) => this.mostrarError(err, 'No se pudo cargar el historial'),
     });
-    this.api.listarSolicitudesMedicas(this.user.codigo).subscribe({
+    this.api.listarSolicitudesMedicas({ codMed: this.user.codigo }).subscribe({
       next: (data) => (this.solicitudesMedicas = data),
       error: (err) => this.mostrarError(err, 'No se pudieron cargar las solicitudes medicas'),
     });
@@ -323,6 +359,19 @@ export class Panel implements OnInit {
           horaFin: '',
           dias: [],
         };
+        const ids = this.solicitudGrupoPreparada?.solicitudes.map((solicitud) => solicitud.idSolicitud) || [];
+        if (ids.length > 0) {
+          this.api.cambiarEstadoSolicitudesMedicas(ids, 'ACEPTADO').subscribe({
+            next: () => {
+              this.solicitudPreparada = null;
+              this.solicitudGrupoPreparada = null;
+              this.mostrarMensaje(`Se crearon ${disponibilidades.length} bloques y se aceptaron ${ids.length} solicitudes`);
+              this.cargarCatalogos();
+            },
+            error: (err) => this.mostrarError(err, 'Se creo el horario, pero no se pudo aceptar la solicitud'),
+          });
+          return;
+        }
         this.solicitudPreparada = null;
         this.solicitudGrupoPreparada = null;
         this.mostrarMensaje(`Se crearon ${disponibilidades.length} bloques de disponibilidad`);
@@ -371,11 +420,23 @@ export class Panel implements OnInit {
   }
 
   prepararSolicitudGrupo(grupo: SolicitudMedicaGrupo): void {
+    if (grupo.estado !== 'PENDIENTE') {
+      this.mostrarError(null, 'Solo se pueden aceptar solicitudes pendientes');
+      return;
+    }
+    const fechas = this.fechasParaAceptar(grupo);
+    const solicitudes = this.solicitudesParaAceptar(grupo);
     this.solicitudPreparada = null;
-    this.solicitudGrupoPreparada = grupo;
+    this.solicitudGrupoPreparada = {
+      ...grupo,
+      solicitudes,
+      fechaInicio: fechas[0],
+      fechaFin: fechas[fechas.length - 1],
+      fechas,
+    };
     this.nuevoHorario = {
-      fechaInicio: grupo.fechaInicio,
-      fechaFin: grupo.fechaFin,
+      fechaInicio: fechas[0],
+      fechaFin: fechas[fechas.length - 1],
       codMed: grupo.medico.codMed,
       codEncargado: '',
       consultorio: '',
@@ -383,24 +444,74 @@ export class Panel implements OnInit {
       mismaHora: true,
       horaInicio: this.formatoHora(grupo.horaInicio),
       horaFin: this.formatoHora(grupo.horaFin),
-      dias: grupo.fechas.map((fecha) => ({
+      dias: fechas.map((fecha) => ({
         fecha,
         horaInicio: this.formatoHora(grupo.horaInicio),
         horaFin: this.formatoHora(grupo.horaFin),
       })),
     };
     this.activeTab = 'horarios';
-    this.mostrarMensaje(`Solicitud cargada con ${grupo.fechas.length} fechas. Completa consultorio y duracion para aceptar todas a la vez.`);
+    this.mostrarMensaje(`Solicitud cargada con ${fechas.length} fechas. Completa consultorio y duracion para aceptar las fechas seleccionadas.`);
+  }
+
+  alternarFechaSolicitud(grupo: SolicitudMedicaGrupo, fecha: string): void {
+    const seleccionadas = this.fechasSeleccionadasPorGrupo[grupo.clave] || [];
+    this.fechasSeleccionadasPorGrupo[grupo.clave] = seleccionadas.includes(fecha)
+      ? seleccionadas.filter((item) => item !== fecha)
+      : [...seleccionadas, fecha].sort();
+  }
+
+  fechaSolicitudSeleccionada(grupo: SolicitudMedicaGrupo, fecha: string): boolean {
+    return (this.fechasSeleccionadasPorGrupo[grupo.clave] || []).includes(fecha);
+  }
+
+  cantidadFechasSeleccionadas(grupo: SolicitudMedicaGrupo): number {
+    return this.fechasParaAceptar(grupo).length;
+  }
+
+  limpiarSeleccionSolicitud(grupo: SolicitudMedicaGrupo): void {
+    this.fechasSeleccionadasPorGrupo[grupo.clave] = [];
+  }
+
+  rechazarSolicitudGrupo(grupo: SolicitudMedicaGrupo): void {
+    const ids = grupo.solicitudes.map((solicitud) => solicitud.idSolicitud);
+    this.api.cambiarEstadoSolicitudesMedicas(ids, 'RECHAZADO').subscribe({
+      next: () => {
+        this.mostrarMensaje(`Se rechazaron ${ids.length} solicitudes`);
+        this.cargarSolicitudesMedicas();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo rechazar la solicitud'),
+    });
   }
 
   atenderCita(codCita: number): void {
     this.api.atenderCita(codCita).subscribe({
       next: () => {
+        this.citaDetalle = null;
         this.mostrarMensaje('Cita marcada como atendida');
         this.cargarCitasMedico();
       },
       error: (err) => this.mostrarError(err, 'No se pudo atender la cita'),
     });
+  }
+
+  marcarAusente(codCita: number): void {
+    this.api.marcarAusente(codCita).subscribe({
+      next: () => {
+        this.citaDetalle = null;
+        this.mostrarMensaje('Cita marcada como ausente');
+        this.cargarCitasMedico();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo marcar la cita como ausente'),
+    });
+  }
+
+  abrirDetalleCita(cita: Cita): void {
+    this.citaDetalle = cita;
+  }
+
+  cerrarDetalleCita(): void {
+    this.citaDetalle = null;
   }
 
   citaPacienteActualizada(mensaje: string): void {
@@ -435,18 +546,103 @@ export class Panel implements OnInit {
 
   estadoClase(cita: Cita): string {
     if (cita.estado === 'CANCELADA') return 'badge danger';
-    if (cita.estado === 'ATENDIDA') return 'badge info';
+    if (cita.estado === 'ATENDIDA') return 'badge success';
+    if (cita.estado === 'AUSENTE') return 'badge absent';
     if (cita.estado === 'POSTERGADA') return 'badge warning';
-    return 'badge success';
+    return 'badge pending';
+  }
+
+  estadoSolicitudClase(estado: string): string {
+    if (estado === 'ACEPTADO') return 'badge success';
+    if (estado === 'RECHAZADO') return 'badge danger';
+    return 'badge pending';
   }
 
   formatoHora(hora: string): string {
     return hora?.slice(0, 5) || '';
   }
 
+  fechasCitasPendientesMedico(): string[] {
+    return [...new Set(this.citasPendientes.map((cita) => cita.fecha))].sort();
+  }
+
+  citasPendientesReporte(): Cita[] {
+    if (!this.fechaReportePendientes) return [];
+    return this.citasPendientes
+      .filter((cita) => cita.fecha === this.fechaReportePendientes)
+      .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+  }
+
+  descargarReporteCitasPendientes(): void {
+    const citas = this.citasPendientesReporte();
+    if (!this.fechaReportePendientes || citas.length === 0) {
+      this.mostrarError(null, 'Selecciona un dia con citas pendientes para generar el reporte');
+      return;
+    }
+
+    descargarComprobantePdf(
+      'Reporte de citas pendientes',
+      `${this.nombreUsuario()} - ${this.fechaReportePendientes}`,
+      [
+        { label: 'Medico', value: this.nombreUsuario() },
+        { label: 'Fecha de atencion', value: this.fechaReportePendientes },
+        { label: 'Total de citas', value: citas.length },
+        ...citas.map((cita) => ({
+          label: `Cita #${cita.codCita}`,
+          value: `${this.formatoHora(cita.horaInicio)} - ${this.formatoHora(cita.horaFin)} | ${cita.paciente} | ${cita.especialidad} | ${cita.consultorio || '-'}`,
+        })),
+      ],
+      `reporte-citas-${this.fechaReportePendientes}.pdf`
+    );
+  }
+
   rangoSemanaMedico(): string {
     const inicio = this.inicioSemana(this.fechaSemanaMedico || this.fechaLocal(new Date()));
     return `${inicio} al ${this.sumarDias(inicio, 6)}`;
+  }
+
+  diasSemanaMedico(): DiaAgenda[] {
+    const inicio = this.inicioSemana(this.fechaSemanaMedico || this.fechaLocal(new Date()));
+    const nombres = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    return nombres.map((dia, index) => {
+      const fecha = this.sumarDias(inicio, index);
+      return {
+        fecha,
+        dia,
+        etiqueta: fecha.slice(8, 10),
+      };
+    });
+  }
+
+  horasAgenda(): string[] {
+    const horas: string[] = [];
+    for (let hora = 7; hora < 22; hora++) {
+      horas.push(`${String(hora).padStart(2, '0')}:00`);
+    }
+    return horas;
+  }
+
+  agendaGridRows(): string {
+    return `44px repeat(${(22 - 7) * 6}, 14px)`;
+  }
+
+  estiloBloqueHorario(disponibilidad: Disponibilidad): Record<string, string> {
+    const dias = this.diasSemanaMedico();
+    const diaIndex = dias.findIndex((dia) => dia.fecha === disponibilidad.horario.fecha);
+    const inicio = this.minutosDesdeInicio(disponibilidad.horaInicio);
+    const fin = this.minutosDesdeInicio(disponibilidad.horaFin);
+    const rowStart = Math.max(2, Math.floor(inicio / 10) + 2);
+    const span = Math.max(2, Math.ceil((fin - inicio) / 10));
+    return {
+      'grid-column': `${diaIndex + 2} / span 1`,
+      'grid-row': `${rowStart} / span ${span}`,
+    };
+  }
+
+  estadoDisponibilidadClase(estado: string): string {
+    if (estado === 'RESERVADO') return 'schedule-event reserved';
+    if (estado === 'NO_DISPONIBLE') return 'schedule-event absent';
+    return 'schedule-event available';
   }
 
   sincronizarDiasSolicitud(): void {
@@ -528,12 +724,23 @@ export class Panel implements OnInit {
       clave,
       solicitudes: ordenadas,
       medico: primera.medico,
+      estado: primera.estado,
       fechaInicio: primera.fecha,
       fechaFin: ultima.fecha,
       fechas: ordenadas.map((solicitud) => solicitud.fecha),
       horaInicio: primera.horaInicio,
       horaFin: primera.horaFin,
     };
+  }
+
+  private fechasParaAceptar(grupo: SolicitudMedicaGrupo): string[] {
+    const seleccionadas = this.fechasSeleccionadasPorGrupo[grupo.clave] || [];
+    return seleccionadas.length > 0 ? [...seleccionadas].sort() : grupo.fechas;
+  }
+
+  private solicitudesParaAceptar(grupo: SolicitudMedicaGrupo): SolicitudMedica[] {
+    const fechas = new Set(this.fechasParaAceptar(grupo));
+    return grupo.solicitudes.filter((solicitud) => fechas.has(solicitud.fecha));
   }
 
   private diasEntre(fechaA: string, fechaB: string): number {
@@ -548,6 +755,17 @@ export class Panel implements OnInit {
       const fechaB = `${b.horario.fecha} ${b.horaInicio}`;
       return fechaA.localeCompare(fechaB);
     });
+  }
+
+  private sincronizarFechaReportePendientes(): void {
+    const fechas = this.fechasCitasPendientesMedico();
+    if (fechas.length === 0) {
+      this.fechaReportePendientes = '';
+      return;
+    }
+    if (!this.fechaReportePendientes || !fechas.includes(this.fechaReportePendientes)) {
+      this.fechaReportePendientes = fechas[0];
+    }
   }
 
   private sincronizarDias(fechaInicio: string, fechaFin: string, actuales: RangoDiaForm[]): RangoDiaForm[] {
@@ -594,5 +812,10 @@ export class Panel implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private minutosDesdeInicio(hora: string): number {
+    const [hh, mm] = this.formatoHora(hora).split(':').map(Number);
+    return (hh - 7) * 60 + (mm || 0);
   }
 }

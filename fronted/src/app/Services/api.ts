@@ -34,6 +34,7 @@ export interface RegistroPacienteRequest extends Paciente {
 export interface Especialidad {
   codEspe: number;
   nombre: string;
+  precio?: number;
 }
 
 export interface Medico {
@@ -129,6 +130,7 @@ export interface SolicitudMedica {
   fecha: string;
   horaInicio: string;
   horaFin: string;
+  estado: 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO';
 }
 
 export interface CrearSolicitudMedicaRequest {
@@ -161,6 +163,7 @@ export interface Cita {
   codMed: string;
   medico: string;
   especialidad: string;
+  precioEspecialidad?: number;
   consultorio?: string;
   notificacionEnviada: boolean | null;
 }
@@ -257,9 +260,15 @@ export class ApiService {
     return this.http.post<Disponibilidad[]>(`${this.apiUrl}/disponibilidades/masivo`, data);
   }
 
-  listarSolicitudesMedicas(codMed?: string): Observable<SolicitudMedica[]> {
+  listarSolicitudesMedicas(filtros?: {
+    codMed?: string;
+    codEspe?: number;
+    estado?: 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO' | '';
+  }): Observable<SolicitudMedica[]> {
     let params = new HttpParams();
-    if (codMed) params = params.set('codMed', codMed);
+    if (filtros?.codMed) params = params.set('codMed', filtros.codMed);
+    if (filtros?.codEspe) params = params.set('codEspe', filtros.codEspe);
+    if (filtros?.estado) params = params.set('estado', filtros.estado);
     return this.http.get<SolicitudMedica[]>(`${this.apiUrl}/solicitudes-medicas`, { params });
   }
 
@@ -269,6 +278,13 @@ export class ApiService {
 
   crearSolicitudesMedicasRango(data: CrearSolicitudMedicaRangoRequest): Observable<SolicitudMedica[]> {
     return this.http.post<SolicitudMedica[]>(`${this.apiUrl}/solicitudes-medicas/rango`, data);
+  }
+
+  cambiarEstadoSolicitudesMedicas(
+    ids: number[],
+    estado: 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO'
+  ): Observable<SolicitudMedica[]> {
+    return this.http.put<SolicitudMedica[]>(`${this.apiUrl}/solicitudes-medicas/estado`, { ids, estado });
   }
 
   listarCitasPaciente(numDoc: string): Observable<Cita[]> {
@@ -297,5 +313,9 @@ export class ApiService {
 
   atenderCita(codCita: number): Observable<Cita> {
     return this.http.put<Cita>(`${this.apiUrl}/citas/${codCita}/atender`, {});
+  }
+
+  marcarAusente(codCita: number): Observable<Cita> {
+    return this.http.put<Cita>(`${this.apiUrl}/citas/${codCita}/ausente`, {});
   }
 }

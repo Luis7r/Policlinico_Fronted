@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService, Disponibilidad, Especialidad, Medico } from '../../Services/api';
+import { ApiService, Cita, Disponibilidad, Especialidad, Medico } from '../../Services/api';
 import {
   descargarComprobantePdf,
   formatoMoneda,
@@ -16,6 +16,7 @@ import {
 })
 export class RegistrarCita implements OnInit {
   @Input() pacienteCodigo: string | null = null;
+  @Input() citas: Cita[] = [];
   @Output() completed = new EventEmitter<string>();
 
   especialidades: Especialidad[] = [];
@@ -91,7 +92,9 @@ export class RegistrarCita implements OnInit {
       })
       .subscribe({
         next: (data) => {
-          this.disponibilidades = this.ordenarDisponibilidades(data);
+          this.disponibilidades = this.ordenarDisponibilidades(data).filter(
+            (disponibilidad) => !this.chocaConCitaActiva(disponibilidad)
+          );
           this.cargandoDisponibilidades = false;
         },
         error: (err) => this.mostrarError(err, 'No se pudieron cargar los horarios disponibles'),
@@ -101,6 +104,14 @@ export class RegistrarCita implements OnInit {
   limpiarFechaFiltro(): void {
     this.fechaFiltro = '';
     this.cargarDisponibilidades();
+  }
+
+  obtenerFechaMinima(): string {
+    const hoy = new Date();
+    const año = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const día = String(hoy.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${día}`;
   }
 
   seleccionarDisponibilidad(disponibilidad: Disponibilidad): void {
@@ -158,7 +169,7 @@ export class RegistrarCita implements OnInit {
   }
 
   montoCita(): number {
-    return precioPorEspecialidad(this.especialidadSeleccionada?.nombre);
+    return precioPorEspecialidad(this.especialidadSeleccionada?.nombre, this.especialidadSeleccionada?.precio);
   }
 
   montoCitaTexto(): string {
@@ -220,6 +231,18 @@ export class RegistrarCita implements OnInit {
       const fechaA = `${a.horario.fecha} ${a.horaInicio}`;
       const fechaB = `${b.horario.fecha} ${b.horaInicio}`;
       return fechaA.localeCompare(fechaB);
+    });
+  }
+
+  private chocaConCitaActiva(disponibilidad: Disponibilidad): boolean {
+    return this.citas.some((cita) => {
+      const activa = cita.estado === 'REGISTRADA' || cita.estado === 'POSTERGADA' || cita.estado === 'PENDIENTE';
+      return (
+        activa &&
+        cita.fecha === disponibilidad.horario.fecha &&
+        disponibilidad.horaInicio < cita.horaFin &&
+        disponibilidad.horaFin > cita.horaInicio
+      );
     });
   }
 

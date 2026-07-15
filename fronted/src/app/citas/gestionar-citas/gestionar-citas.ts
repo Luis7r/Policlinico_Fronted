@@ -205,7 +205,7 @@ citaSeleccionada: Cita | null = null;
   }
 
   montoCita(cita: Cita | null): number {
-    return precioPorEspecialidad(cita?.especialidad);
+    return precioPorEspecialidad(cita?.especialidad, cita?.precioEspecialidad);
   }
 
   montoCitaTexto(cita: Cita | null): string {
@@ -241,6 +241,8 @@ citaSeleccionada: Cita | null = null;
 
                 this.citaSeleccionada!.especialidad
 
+                && !this.chocaConOtraCitaActiva(d)
+
             )
 
             .sort((a,b)=>
@@ -275,6 +277,19 @@ citaSeleccionada: Cita | null = null;
     this.procesando = false;
     this.cargandoDisponibilidades = false;
     this.error = err?.error?.error || err?.error?.message || fallback;
+  }
+
+  private chocaConOtraCitaActiva(disponibilidad: Disponibilidad): boolean {
+    return this.citas.some((cita) => {
+      const activa = cita.estado === 'REGISTRADA' || cita.estado === 'POSTERGADA' || cita.estado === 'PENDIENTE';
+      return (
+        activa &&
+        cita.codCita !== this.citaSeleccionada?.codCita &&
+        cita.fecha === disponibilidad.horario.fecha &&
+        disponibilidad.horaInicio < cita.horaFin &&
+        disponibilidad.horaFin > cita.horaInicio
+      );
+    });
   }
 
   private descargarNotaCredito(cita: Cita, motivo: string): void {

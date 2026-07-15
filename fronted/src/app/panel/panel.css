@@ -10,7 +10,6 @@
   background: #ffffff;
   border: 1px solid #d8e0ea;
   border-radius: 8px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
 .welcome-panel {
@@ -45,10 +44,6 @@ h2 {
 .muted {
   color: #64748b;
   margin-top: 8px;
-}
-
-.block-text {
-  display: block;
 }
 
 .metric-grid {
@@ -263,6 +258,16 @@ td {
   color: #991b1b;
 }
 
+.pending {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.absent {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 .empty-state {
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
@@ -298,14 +303,327 @@ td {
   margin-top: 8px;
 }
 
-.date-list span {
+.date-list span,
+.date-list button {
   background: #ecfdf5;
   border: 1px solid #bbf7d0;
   border-radius: 999px;
   color: #0f766e;
+  cursor: pointer;
   font-size: 12px;
   font-weight: 900;
   padding: 5px 8px;
+}
+
+.date-list button:disabled {
+  cursor: default;
+}
+
+.date-list.selectable button.selected {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.request-card-grid,
+.appointment-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  padding: 20px;
+}
+
+.request-card,
+.appointment-card {
+  background: #ffffff;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.request-card {
+  border-top: 4px solid #3aa0d8;
+}
+
+.request-card.pendiente {
+  border-top-color: #f97316;
+}
+
+.request-card.aceptado {
+  border-top-color: #16a34a;
+}
+
+.request-card.rechazado {
+  border-top-color: #dc2626;
+}
+
+.request-card-top,
+.request-range {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.request-filters {
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 18px 20px;
+}
+
+.request-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr auto auto;
+}
+
+.reject-button {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.request-count {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  color: #0f766e;
+  font-weight: 900;
+  padding: 6px 10px;
+}
+
+.appointment-card {
+  cursor: pointer;
+  text-align: left;
+}
+
+.appointment-card:hover {
+  border-color: #3aa0d8;
+}
+
+.appointment-card.registrada {
+  border-left: 5px solid #f97316;
+}
+
+.appointment-card.postergada {
+  border-left: 5px solid #3aa0d8;
+}
+
+.appointment-card.atendida {
+  border-left: 5px solid #16a34a;
+}
+
+.appointment-card.ausente {
+  border-left: 5px solid #64748b;
+}
+
+.appointment-card strong {
+  color: #13283d;
+  font-size: 16px;
+}
+
+.appointment-card span:not(.badge) {
+  color: #64748b;
+  font-weight: 750;
+}
+
+.weekly-schedule {
+  background: #f7fbfd;
+  border-top: 1px solid #d8e0ea;
+  display: grid;
+  grid-template-columns: 72px repeat(7, minmax(130px, 1fr));
+  min-width: 980px;
+  overflow: hidden;
+  position: relative;
+}
+
+.schedule-corner,
+.schedule-day,
+.schedule-hour {
+  background: #ffffff;
+  border-bottom: 1px solid #dce7ef;
+  border-right: 1px solid #dce7ef;
+}
+
+.schedule-corner {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.schedule-day {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  padding: 8px 6px;
+}
+
+.schedule-day strong {
+  color: #13283d;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.schedule-day span {
+  background: #ecfdf5;
+  border-radius: 999px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 3px 8px;
+}
+
+.schedule-hour {
+  align-items: start;
+  color: #64748b;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.weekly-schedule::after {
+  background-image:
+    linear-gradient(to right, transparent 71px, #dce7ef 72px, transparent 73px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 33px, #dce7ef 34px);
+  content: "";
+  grid-column: 2 / -1;
+  grid-row: 2 / -1;
+  pointer-events: none;
+}
+
+.schedule-event {
+  align-self: stretch;
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  margin: 3px;
+  min-height: 30px;
+  overflow: hidden;
+  padding: 8px;
+  z-index: 1;
+}
+
+.schedule-event span {
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  justify-self: start;
+  padding: 2px 7px;
+}
+
+.schedule-event strong,
+.schedule-event small {
+  color: #ffffff;
+}
+
+.schedule-event.available {
+  background: #0f766e;
+}
+
+.schedule-event.available span {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.schedule-event.reserved {
+  background: #f97316;
+}
+
+.schedule-event.absent {
+  background: #64748b;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.56);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 9999;
+}
+
+.modal-card {
+  background: #ffffff;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  max-width: 680px;
+  padding: 22px;
+  width: 100%;
+}
+
+.modal-card header,
+.modal-card footer {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-grid div {
+  background: #f8fafc;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.detail-grid span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ghost-icon-button {
+  background: #f8fafc;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 24px;
+  height: 40px;
+  width: 40px;
+}
+
+.ghost-button,
+.absent-button {
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.ghost-button {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.absent-button {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
 }
 
 @media (max-width: 760px) {
@@ -319,6 +637,19 @@ td {
   }
 
   .day-range-card {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-card footer {
+    display: grid;
+  }
+
+  .request-filters,
+  .request-actions {
     grid-template-columns: 1fr;
   }
 }
