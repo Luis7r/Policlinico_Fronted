@@ -5,12 +5,16 @@ import { Router } from '@angular/router';
 import {
   ApiService,
   Cita,
+  Devolucion,
   Disponibilidad,
+  Empleado,
   EncargadoCitas,
   Especialidad,
+  FinanzasDashboard,
   Horario,
   LoginResponse,
   Medico,
+  Pago,
   SolicitudMedica,
 } from '../Services/api';
 import { AuthService } from '../Services/auth';
@@ -58,6 +62,7 @@ export class Panel implements OnInit {
   especialidades: Especialidad[] = [];
   medicos: Medico[] = [];
   encargados: EncargadoCitas[] = [];
+  empleados: Empleado[] = [];
   horarios: Horario[] = [];
   disponibilidades: Disponibilidad[] = [];
   citasPaciente: Cita[] = [];
@@ -75,6 +80,19 @@ export class Panel implements OnInit {
   citaDetalle: Cita | null = null;
 
   nuevaEspecialidad = '';
+  nuevoPrecioEspecialidad = 60;
+  pagosFinanzas: Pago[] = [];
+  devolucionesFinanzas: Devolucion[] = [];
+  dashboardFinanzas: FinanzasDashboard | null = null;
+  filtrosFinanzas = {
+    estado: '',
+    fechaInicio: '',
+    fechaFin: '',
+    codEspe: 0,
+    codMed: '',
+  };
+  tarjetaDestinoDevolucion: Record<number, string> = {};
+  observacionDevolucion: Record<number, string> = {};
   nuevoMedico = {
     numDoc: '',
     nombre: '',
@@ -87,6 +105,16 @@ export class Panel implements OnInit {
     numDoc: '',
     nombre: '',
     apellido: '',
+    correo: '',
+    clave: '',
+  };
+  nuevoEmpleado = {
+    codEmpleado: '',
+    nombre: '',
+    apellido: '',
+    sexo: 'M',
+    tipoEmpleado: 'APROBADOR_DEVOLUCIONES',
+    area: 'FINANZAS',
     correo: '',
     clave: '',
   };
@@ -119,6 +147,15 @@ export class Panel implements OnInit {
   solicitudPreparada: SolicitudMedica | null = null;
   solicitudGrupoPreparada: SolicitudMedicaGrupo | null = null;
   fechasSeleccionadasPorGrupo: Record<string, string[]> = {};
+  reprogramacionMedico = {
+    codMedOrigen: '',
+    codMedDestino: '',
+    fechaInicio: '',
+    fechaFin: '',
+    fechas: [] as string[],
+  };
+  disponibilidadesReprogramacion: Disponibilidad[] = [];
+  cargandoReprogramacion = false;
 
   get menuItems() {
     const items = [{ label: 'Inicio', action: () => this.cambiarTab('inicio') }];
@@ -140,8 +177,20 @@ export class Panel implements OnInit {
       items.push({ label: 'Especialidades', action: () => this.cambiarTab('especialidades') });
       items.push({ label: 'Medicos', action: () => this.cambiarTab('medicos') });
       items.push({ label: 'Jefes medicos', action: () => this.cambiarTab('encargados') });
+      items.push({ label: 'Empleados finanzas', action: () => this.cambiarTab('empleados') });
       items.push({ label: 'Horarios', action: () => this.cambiarTab('horarios') });
+      items.push({ label: 'Reprogramar horarios', action: () => this.cambiarTab('reprogramar-horarios') });
       items.push({ label: 'Disponibilidades', action: () => this.cambiarTab('disponibilidades') });
+    }
+
+    if (this.esAprobadorDevoluciones()) {
+      items.push({ label: 'Solicitudes devolucion', action: () => this.cambiarTab('devoluciones') });
+    }
+
+    if (this.esCajero()) {
+      items.push({ label: 'Dashboard finanzas', action: () => this.cambiarTab('finanzas-dashboard') });
+      items.push({ label: 'Ejecutar devoluciones', action: () => this.cambiarTab('devoluciones') });
+      items.push({ label: 'Pagos', action: () => this.cambiarTab('pagos') });
     }
 
     return items;
@@ -204,6 +253,12 @@ export class Panel implements OnInit {
     if (tab === 'solicitudes') {
       this.cargarSolicitudesMedicas();
     }
+    if (tab === 'devoluciones') {
+      this.cargarDatosFinanzas();
+    }
+    if (tab === 'pagos' || tab === 'finanzas-dashboard') {
+      this.cargarDatosFinanzas();
+    }
   }
 
   cargarDatosBase(): void {
@@ -219,6 +274,12 @@ export class Panel implements OnInit {
       return;
     }
 
+    if (this.esFinanzas()) {
+      this.cargarCatalogos();
+      this.cargarDatosFinanzas();
+      return;
+    }
+
     this.cargarCatalogos();
   }
 
@@ -226,6 +287,7 @@ export class Panel implements OnInit {
     this.api.listarEspecialidades().subscribe((data) => (this.especialidades = data));
     this.api.listarMedicos().subscribe((data) => (this.medicos = data));
     this.api.listarEncargados().subscribe((data) => (this.encargados = data));
+    this.api.listarEmpleados().subscribe((data) => (this.empleados = data));
     this.api.listarHorarios().subscribe((data) => (this.horarios = data));
     this.api.listarDisponibilidades().subscribe((data) => (this.disponibilidades = data));
     this.cargarSolicitudesMedicas();
@@ -311,13 +373,77 @@ export class Panel implements OnInit {
 
   crearEspecialidad(): void {
     if (!this.nuevaEspecialidad.trim()) return;
-    this.api.crearEspecialidad(this.nuevaEspecialidad.trim()).subscribe({
+    this.api.crearEspecialidad(this.nuevaEspecialidad.trim(), this.nuevoPrecioEspecialidad || 60).subscribe({
       next: () => {
         this.nuevaEspecialidad = '';
+        this.nuevoPrecioEspecialidad = 60;
         this.mostrarMensaje('Especialidad creada');
         this.cargarCatalogos();
       },
       error: (err) => this.mostrarError(err, 'No se pudo crear la especialidad'),
+    });
+  }
+
+  cargarDatosFinanzas(): void {
+    const filtros = {
+      fechaInicio: this.filtrosFinanzas.fechaInicio || undefined,
+      fechaFin: this.filtrosFinanzas.fechaFin || undefined,
+    };
+    this.api.dashboardFinanzas(filtros).subscribe({
+      next: (data) => (this.dashboardFinanzas = data),
+      error: (err) => this.mostrarError(err, 'No se pudo cargar el dashboard financiero'),
+    });
+    this.api.listarPagos(filtros).subscribe({
+      next: (data) => (this.pagosFinanzas = data),
+      error: (err) => this.mostrarError(err, 'No se pudieron cargar los pagos'),
+    });
+    this.api.listarDevoluciones({
+      estado: this.filtrosFinanzas.estado || undefined,
+      fechaInicio: this.filtrosFinanzas.fechaInicio || undefined,
+      fechaFin: this.filtrosFinanzas.fechaFin || undefined,
+      codEspe: this.filtrosFinanzas.codEspe || undefined,
+      codMed: this.filtrosFinanzas.codMed || undefined,
+    }).subscribe({
+      next: (data) => (this.devolucionesFinanzas = data),
+      error: (err) => this.mostrarError(err, 'No se pudieron cargar las devoluciones'),
+    });
+  }
+
+  aprobarDevolucion(devolucion: Devolucion): void {
+    if (!this.user?.codigo) return;
+    this.api.aprobarDevolucion(devolucion.idSolicitud, this.user.codigo, this.observacionDevolucion[devolucion.idSolicitud]).subscribe({
+      next: () => {
+        this.mostrarMensaje('Solicitud aprobada');
+        this.cargarDatosFinanzas();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo aprobar la devolucion'),
+    });
+  }
+
+  rechazarDevolucion(devolucion: Devolucion): void {
+    if (!this.user?.codigo) return;
+    this.api.rechazarDevolucion(devolucion.idSolicitud, this.user.codigo, this.observacionDevolucion[devolucion.idSolicitud]).subscribe({
+      next: () => {
+        this.mostrarMensaje('Solicitud rechazada');
+        this.cargarDatosFinanzas();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo rechazar la devolucion'),
+    });
+  }
+
+  ejecutarDevolucion(devolucion: Devolucion): void {
+    if (!this.user?.codigo) return;
+    this.api.ejecutarDevolucion(
+      devolucion.idSolicitud,
+      this.user.codigo,
+      this.tarjetaDestinoDevolucion[devolucion.idSolicitud],
+      this.observacionDevolucion[devolucion.idSolicitud]
+    ).subscribe({
+      next: () => {
+        this.mostrarMensaje('Devolucion marcada como realizada');
+        this.cargarDatosFinanzas();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo ejecutar la devolucion'),
     });
   }
 
@@ -340,6 +466,26 @@ export class Panel implements OnInit {
         this.cargarCatalogos();
       },
       error: (err) => this.mostrarError(err, 'No se pudo registrar el encargado'),
+    });
+  }
+
+  registrarEmpleado(): void {
+    this.api.registrarEmpleado(this.nuevoEmpleado).subscribe({
+      next: () => {
+        this.nuevoEmpleado = {
+          codEmpleado: '',
+          nombre: '',
+          apellido: '',
+          sexo: 'M',
+          tipoEmpleado: 'APROBADOR_DEVOLUCIONES',
+          area: 'FINANZAS',
+          correo: '',
+          clave: '',
+        };
+        this.mostrarMensaje('Empleado financiero registrado');
+        this.cargarCatalogos();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo registrar el empleado financiero'),
     });
   }
 
@@ -484,6 +630,83 @@ export class Panel implements OnInit {
     });
   }
 
+  cargarHorariosReprogramacion(): void {
+    if (
+      !this.reprogramacionMedico.codMedOrigen ||
+      !this.reprogramacionMedico.codMedDestino ||
+      !this.reprogramacionMedico.fechaInicio ||
+      !this.reprogramacionMedico.fechaFin
+    ) {
+      this.mostrarError(null, 'Seleccione medico origen, medico destino y rango de fechas');
+      return;
+    }
+    if (this.reprogramacionMedico.codMedOrigen === this.reprogramacionMedico.codMedDestino) {
+      this.mostrarError(null, 'El medico destino debe ser diferente al medico origen');
+      return;
+    }
+
+    this.cargandoReprogramacion = true;
+    this.limpiarMensajes();
+    this.api
+      .listarDisponibilidades({
+        codMed: this.reprogramacionMedico.codMedOrigen,
+        fechaInicio: this.reprogramacionMedico.fechaInicio,
+        fechaFin: this.reprogramacionMedico.fechaFin,
+        incluirPasadas: true,
+      })
+      .subscribe({
+        next: (data) => {
+          this.disponibilidadesReprogramacion = this.ordenarDisponibilidades(data).filter(
+            (disponibilidad) => disponibilidad.estado !== 'NO_DISPONIBLE'
+          );
+          this.reprogramacionMedico.fechas = this.fechasReprogramacionDisponibles();
+          this.cargandoReprogramacion = false;
+        },
+        error: (err) => this.mostrarError(err, 'No se pudieron cargar los horarios del medico origen'),
+      });
+  }
+
+  fechasReprogramacionDisponibles(): string[] {
+    return [...new Set(this.disponibilidadesReprogramacion.map((d) => d.horario.fecha))].sort();
+  }
+
+  bloquesReprogramacionPorFecha(fecha: string): number {
+    return this.disponibilidadesReprogramacion.filter((d) => d.horario.fecha === fecha).length;
+  }
+
+  fechaReprogramacionSeleccionada(fecha: string): boolean {
+    return this.reprogramacionMedico.fechas.includes(fecha);
+  }
+
+  alternarFechaReprogramacion(fecha: string): void {
+    this.reprogramacionMedico.fechas = this.fechaReprogramacionSeleccionada(fecha)
+      ? this.reprogramacionMedico.fechas.filter((item) => item !== fecha)
+      : [...this.reprogramacionMedico.fechas, fecha].sort();
+  }
+
+  reasignarHorarioMedico(): void {
+    if (this.reprogramacionMedico.fechas.length === 0) {
+      this.mostrarError(null, 'Seleccione al menos una fecha para reasignar');
+      return;
+    }
+    this.cargandoReprogramacion = true;
+    this.api.reasignarHorarioMedico({
+      codMedOrigen: this.reprogramacionMedico.codMedOrigen,
+      codMedDestino: this.reprogramacionMedico.codMedDestino,
+      fechas: this.reprogramacionMedico.fechas,
+    }).subscribe({
+      next: (response) => {
+        this.cargandoReprogramacion = false;
+        this.mostrarMensaje(
+          `Se reasignaron ${response.bloquesReasignados} bloques y ${response.citasReasignadas} citas`
+        );
+        this.cargarHorariosReprogramacion();
+        this.cargarCatalogos();
+      },
+      error: (err) => this.mostrarError(err, 'No se pudo reasignar el horario'),
+    });
+  }
+
   atenderCita(codCita: number): void {
     this.api.atenderCita(codCita).subscribe({
       next: () => {
@@ -534,6 +757,22 @@ export class Panel implements OnInit {
 
   esEncargado(): boolean {
     return this.user?.rol === 'ENCARGADO_CITAS' || this.user?.rol === 'ADMIN';
+  }
+
+  esAprobadorDevoluciones(): boolean {
+    return this.user?.rol === 'APROBADOR_DEVOLUCIONES';
+  }
+
+  esCajero(): boolean {
+    return this.user?.rol === 'CAJERO';
+  }
+
+  esFinanzas(): boolean {
+    return this.esAprobadorDevoluciones() || this.esCajero();
+  }
+
+  moneda(valor: number | null | undefined): string {
+    return `S/ ${Number(valor || 0).toFixed(2)}`;
   }
 
   citasActivasPaciente(): number {

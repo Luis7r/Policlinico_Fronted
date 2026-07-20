@@ -11,7 +11,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   idUser: number;
   correo: string;
-  rol: 'PACIENTE' | 'MEDICO' | 'ENCARGADO_CITAS' | 'ADMIN';
+  rol: 'PACIENTE' | 'MEDICO' | 'ENCARGADO_CITAS' | 'APROBADOR_DEVOLUCIONES' | 'CAJERO' | 'ADMIN';
   codigo: string | null;
   numDoc: string | null;
   nombreCompleto: string | null;
@@ -64,6 +64,20 @@ export interface RegistroEncargadoRequest {
   numDoc: string;
   nombre: string;
   apellido: string;
+  correo: string;
+  clave: string;
+}
+
+export interface Empleado {
+  codEmpleado: string;
+  nombre: string;
+  apellido: string;
+  sexo?: string;
+  tipoEmpleado: 'APROBADOR_DEVOLUCIONES' | 'CAJERO' | string;
+  area: string;
+}
+
+export interface RegistroEmpleadoRequest extends Empleado {
   correo: string;
   clave: string;
 }
@@ -168,6 +182,63 @@ export interface Cita {
   notificacionEnviada: boolean | null;
 }
 
+export interface ReasignarHorarioMedicoRequest {
+  codMedOrigen: string;
+  codMedDestino: string;
+  fechas: string[];
+}
+
+export interface ReasignarHorarioMedicoResponse {
+  bloquesReasignados: number;
+  citasReasignadas: number;
+  citas: Cita[];
+}
+
+export interface Pago {
+  idPago: number;
+  codCita: number;
+  monto: number;
+  metodoPago: string;
+  numeroTarjeta?: string;
+  referenciaPago?: string;
+  estado: string;
+  fechaPago: string;
+}
+
+export interface Devolucion {
+  idSolicitud: number;
+  codCita: number;
+  idPago: number;
+  paciente: string;
+  medico: string;
+  codMed: string;
+  especialidad: string;
+  codEspe: number;
+  fechaCita: string;
+  monto: number;
+  metodoPago: string;
+  numeroTarjetaPago?: string;
+  numeroTarjetaDestino?: string;
+  motivo?: string;
+  estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'DEVUELTA' | string;
+  fechaSolicitud: string;
+  fechaAprobacion?: string;
+  fechaDevolucion?: string;
+  aprobador?: string;
+  cajero?: string;
+  observacion?: string;
+}
+
+export interface FinanzasDashboard {
+  ingresos: number;
+  cancelaciones: number;
+  devolucionesRealizadas: number;
+  pagosRegistrados: number;
+  solicitudesPendientes: number;
+  solicitudesAprobadas: number;
+  solicitudesDevueltas: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -194,8 +265,8 @@ export class ApiService {
     return this.http.get<Especialidad[]>(`${this.apiUrl}/especialidades`);
   }
 
-  crearEspecialidad(nombre: string): Observable<Especialidad> {
-    return this.http.post<Especialidad>(`${this.apiUrl}/especialidades`, { nombre });
+  crearEspecialidad(nombre: string, precio?: number): Observable<Especialidad> {
+    return this.http.post<Especialidad>(`${this.apiUrl}/especialidades`, { nombre, precio });
   }
 
   listarMedicos(codEspe?: number): Observable<Medico[]> {
@@ -216,6 +287,14 @@ export class ApiService {
 
   registrarEncargado(data: RegistroEncargadoRequest): Observable<EncargadoCitas> {
     return this.http.post<EncargadoCitas>(`${this.apiUrl}/encargados-citas`, data);
+  }
+
+  listarEmpleados(): Observable<Empleado[]> {
+    return this.http.get<Empleado[]>(`${this.apiUrl}/empleados`);
+  }
+
+  registrarEmpleado(data: RegistroEmpleadoRequest): Observable<Empleado> {
+    return this.http.post<Empleado>(`${this.apiUrl}/empleados`, data);
   }
 
   listarHorarios(filtros?: { fecha?: string; codMed?: string; codEncargado?: string }): Observable<Horario[]> {
@@ -291,8 +370,12 @@ export class ApiService {
     return this.http.get<Cita[]>(`${this.apiUrl}/citas?numDoc=${encodeURIComponent(numDoc)}`);
   }
 
-  registrarCita(numDoc: string, codDis: number): Observable<Cita> {
-    return this.http.post<Cita>(`${this.apiUrl}/citas`, { numDoc, codDis });
+  registrarCita(numDoc: string, codDis: number, pago?: { metodoPago?: string; numeroTarjeta?: string; referenciaPago?: string }): Observable<Cita> {
+    return this.http.post<Cita>(`${this.apiUrl}/citas`, { numDoc, codDis, ...pago });
+  }
+
+  reasignarHorarioMedico(data: ReasignarHorarioMedicoRequest): Observable<ReasignarHorarioMedicoResponse> {
+    return this.http.post<ReasignarHorarioMedicoResponse>(`${this.apiUrl}/citas/reasignar-medico`, data);
   }
 
   cancelarCita(codCita: number, motivo?: string): Observable<Cita> {
@@ -317,5 +400,51 @@ export class ApiService {
 
   marcarAusente(codCita: number): Observable<Cita> {
     return this.http.put<Cita>(`${this.apiUrl}/citas/${codCita}/ausente`, {});
+  }
+
+  listarPagos(filtros?: { fechaInicio?: string; fechaFin?: string }): Observable<Pago[]> {
+    let params = new HttpParams();
+    if (filtros?.fechaInicio) params = params.set('fechaInicio', filtros.fechaInicio);
+    if (filtros?.fechaFin) params = params.set('fechaFin', filtros.fechaFin);
+    return this.http.get<Pago[]>(`${this.apiUrl}/finanzas/pagos`, { params });
+  }
+
+  listarDevoluciones(filtros?: {
+    estado?: string;
+    fechaInicio?: string;
+    fechaFin?: string;
+    codEspe?: number;
+    codMed?: string;
+  }): Observable<Devolucion[]> {
+    let params = new HttpParams();
+    if (filtros?.estado) params = params.set('estado', filtros.estado);
+    if (filtros?.fechaInicio) params = params.set('fechaInicio', filtros.fechaInicio);
+    if (filtros?.fechaFin) params = params.set('fechaFin', filtros.fechaFin);
+    if (filtros?.codEspe) params = params.set('codEspe', filtros.codEspe);
+    if (filtros?.codMed) params = params.set('codMed', filtros.codMed);
+    return this.http.get<Devolucion[]>(`${this.apiUrl}/finanzas/devoluciones`, { params });
+  }
+
+  aprobarDevolucion(idSolicitud: number, codEmpleado: string, observacion?: string): Observable<Devolucion> {
+    return this.http.put<Devolucion>(`${this.apiUrl}/finanzas/devoluciones/${idSolicitud}/aprobar`, { codEmpleado, observacion });
+  }
+
+  rechazarDevolucion(idSolicitud: number, codEmpleado: string, observacion?: string): Observable<Devolucion> {
+    return this.http.put<Devolucion>(`${this.apiUrl}/finanzas/devoluciones/${idSolicitud}/rechazar`, { codEmpleado, observacion });
+  }
+
+  ejecutarDevolucion(idSolicitud: number, codEmpleado: string, numeroTarjetaDestino?: string, observacion?: string): Observable<Devolucion> {
+    return this.http.put<Devolucion>(`${this.apiUrl}/finanzas/devoluciones/${idSolicitud}/devolver`, {
+      codEmpleado,
+      numeroTarjetaDestino,
+      observacion,
+    });
+  }
+
+  dashboardFinanzas(filtros?: { fechaInicio?: string; fechaFin?: string }): Observable<FinanzasDashboard> {
+    let params = new HttpParams();
+    if (filtros?.fechaInicio) params = params.set('fechaInicio', filtros.fechaInicio);
+    if (filtros?.fechaFin) params = params.set('fechaFin', filtros.fechaFin);
+    return this.http.get<FinanzasDashboard>(`${this.apiUrl}/finanzas/dashboard`, { params });
   }
 }

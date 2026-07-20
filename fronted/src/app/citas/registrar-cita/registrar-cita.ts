@@ -131,7 +131,11 @@ export class RegistrarCita implements OnInit {
 
     this.guardando = true;
     this.error = '';
-    this.api.registrarCita(this.pacienteCodigo, this.disponibilidadSeleccionada.codDis).subscribe({
+    this.api.registrarCita(this.pacienteCodigo, this.disponibilidadSeleccionada.codDis, {
+      metodoPago: this.metodoPago === 'tarjeta' ? 'TARJETA' : 'QR',
+      numeroTarjeta: this.metodoPago === 'tarjeta' ? this.numeroTarjeta.trim() : undefined,
+      referenciaPago: this.metodoPago === 'qr' ? 'QR_DEMO_CONFIRMADO' : undefined,
+    }).subscribe({
       next: (cita) => {
         this.guardando = false;
         this.descargarComprobantePago(cita.codCita);
@@ -174,6 +178,10 @@ export class RegistrarCita implements OnInit {
 
   montoCitaTexto(): string {
     return formatoMoneda(this.montoCita());
+  }
+
+  precioEspecialidadTexto(especialidad: Especialidad): string {
+    return formatoMoneda(precioPorEspecialidad(especialidad.nombre, especialidad.precio));
   }
 
   pagoValido(): boolean {

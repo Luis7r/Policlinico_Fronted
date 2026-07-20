@@ -70,6 +70,25 @@
         <strong>{{ disponibilidades.length }}</strong>
       </article>
     </div>
+
+    <div class="metric-grid" *ngIf="esFinanzas() && dashboardFinanzas">
+      <article class="metric-card">
+        <span class="metric-label">Ingresos por citas</span>
+        <strong>{{ moneda(dashboardFinanzas.ingresos) }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Citas canceladas</span>
+        <strong>{{ moneda(dashboardFinanzas.cancelaciones) }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Devuelto</span>
+        <strong>{{ moneda(dashboardFinanzas.devolucionesRealizadas) }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Pendientes</span>
+        <strong>{{ dashboardFinanzas.solicitudesPendientes }}</strong>
+      </article>
+    </div>
   </section>
 
 
@@ -297,10 +316,14 @@
         Nombre
         <input name="nuevaEspecialidad" [(ngModel)]="nuevaEspecialidad" placeholder="Ej: Dermatologia" required />
       </label>
+      <label>
+        Precio
+        <input type="number" name="nuevoPrecioEspecialidad" [(ngModel)]="nuevoPrecioEspecialidad" min="0" step="1" required />
+      </label>
       <button class="primary-button" type="submit">Crear especialidad</button>
     </form>
     <div class="pill-list">
-      <span *ngFor="let especialidad of especialidades">{{ especialidad.nombre }}</span>
+      <span *ngFor="let especialidad of especialidades">{{ especialidad.nombre }} · {{ moneda(especialidad.precio) }}</span>
     </div>
   </section>
 
@@ -345,6 +368,70 @@
       <label>Clave <input type="password" name="encClave" [(ngModel)]="nuevoEncargado.clave" required /></label>
       <button class="primary-button wide" type="submit">Registrar jefe medico</button>
     </form>
+  </section>
+
+  <section *ngIf="esEncargado() && activeTab === 'empleados'" class="page-stack">
+    <article class="form-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Finanzas</p>
+          <h2>Registrar empleado financiero</h2>
+        </div>
+      </div>
+      <form (ngSubmit)="registrarEmpleado()" class="form-grid">
+        <label>Codigo <input name="empCodigo" [(ngModel)]="nuevoEmpleado.codEmpleado" placeholder="Ej: F001" /></label>
+        <label>Nombre <input name="empNombre" [(ngModel)]="nuevoEmpleado.nombre" required /></label>
+        <label>Apellido <input name="empApellido" [(ngModel)]="nuevoEmpleado.apellido" required /></label>
+        <label>
+          Sexo
+          <select name="empSexo" [(ngModel)]="nuevoEmpleado.sexo">
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+          </select>
+        </label>
+        <label>
+          Tipo empleado
+          <select name="empTipo" [(ngModel)]="nuevoEmpleado.tipoEmpleado" required>
+            <option value="APROBADOR_DEVOLUCIONES">Aprobador devoluciones</option>
+            <option value="CAJERO">Cajero</option>
+          </select>
+        </label>
+        <label>Area <input name="empArea" [(ngModel)]="nuevoEmpleado.area" required /></label>
+        <label>Correo <input type="email" name="empCorreo" [(ngModel)]="nuevoEmpleado.correo" required /></label>
+        <label>Clave <input type="password" name="empClave" [(ngModel)]="nuevoEmpleado.clave" required /></label>
+        <button class="primary-button wide" type="submit">Registrar empleado</button>
+      </form>
+    </article>
+
+    <article class="data-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Finanzas</p>
+          <h2>Empleados registrados</h2>
+        </div>
+      </div>
+      <div class="table-wrap" *ngIf="empleados.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Nombre</th>
+              <th>Rol</th>
+              <th>Area</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let empleado of empleados">
+              <td>{{ empleado.codEmpleado }}</td>
+              <td>{{ empleado.nombre }} {{ empleado.apellido }}</td>
+              <td>{{ empleado.tipoEmpleado }}</td>
+              <td>{{ empleado.area }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" *ngIf="empleados.length === 0">No hay empleados financieros registrados.</div>
+    </article>
   </section>
 
   <section *ngIf="esEncargado() && activeTab === 'solicitudes'" class="data-panel">
@@ -562,6 +649,67 @@
     </article>
   </section>
 
+  <section *ngIf="esEncargado() && activeTab === 'reprogramar-horarios'" class="data-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Agenda</p>
+        <h2>Reprogramar horarios entre medicos</h2>
+        <p class="muted">El medico destino debe tener bloques disponibles en las mismas fechas y horas.</p>
+      </div>
+    </div>
+    <form class="form-grid">
+      <label>
+        Medico origen
+        <select name="repCodMedOrigen" [(ngModel)]="reprogramacionMedico.codMedOrigen">
+          <option value="">Seleccione</option>
+          <option *ngFor="let medico of medicos" [value]="medico.codMed">
+            {{ medico.nombre }} {{ medico.apellido }} - {{ medico.especialidad.nombre }}
+          </option>
+        </select>
+      </label>
+      <label>
+        Medico destino
+        <select name="repCodMedDestino" [(ngModel)]="reprogramacionMedico.codMedDestino">
+          <option value="">Seleccione</option>
+          <option *ngFor="let medico of medicos" [value]="medico.codMed">
+            {{ medico.nombre }} {{ medico.apellido }} - {{ medico.especialidad.nombre }}
+          </option>
+        </select>
+      </label>
+      <label>
+        Fecha inicio
+        <input type="date" name="repFechaInicio" [(ngModel)]="reprogramacionMedico.fechaInicio" />
+      </label>
+      <label>
+        Fecha fin
+        <input type="date" name="repFechaFin" [(ngModel)]="reprogramacionMedico.fechaFin" />
+      </label>
+      <button class="primary-button wide" type="button" (click)="cargarHorariosReprogramacion()" [disabled]="cargandoReprogramacion">
+        Buscar horarios del medico origen
+      </button>
+    </form>
+
+    <div class="date-list selectable" *ngIf="fechasReprogramacionDisponibles().length > 0">
+      <button
+        type="button"
+        *ngFor="let fecha of fechasReprogramacionDisponibles()"
+        [class.selected]="fechaReprogramacionSeleccionada(fecha)"
+        (click)="alternarFechaReprogramacion(fecha)">
+        {{ fecha }} · {{ bloquesReprogramacionPorFecha(fecha) }} bloques
+      </button>
+    </div>
+
+    <div class="empty-state" *ngIf="!cargandoReprogramacion && disponibilidadesReprogramacion.length === 0">
+      No hay horarios activos del medico origen para el rango seleccionado.
+    </div>
+
+    <form class="form-grid one-column" *ngIf="fechasReprogramacionDisponibles().length > 0">
+      <button class="primary-button" type="button" (click)="reasignarHorarioMedico()" [disabled]="cargandoReprogramacion">
+        Reasignar fechas seleccionadas
+      </button>
+    </form>
+  </section>
+
   <section *ngIf="esEncargado() && activeTab === 'disponibilidades'" class="form-panel">
     <div class="panel-heading">
       <div>
@@ -590,5 +738,72 @@
     <p class="context-note">
       Ejemplo: si registras 13:00 a 19:00 y duracion 30, el sistema crea automaticamente bloques de media hora.
     </p>
+  </section>
+
+  <section *ngIf="esFinanzas() && (activeTab === 'devoluciones' || activeTab === 'pagos' || activeTab === 'finanzas-dashboard')" class="data-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Finanzas</p>
+        <h2>{{ activeTab === 'pagos' ? 'Pagos registrados' : activeTab === 'finanzas-dashboard' ? 'Dashboard financiero' : 'Solicitudes de devolucion' }}</h2>
+      </div>
+    </div>
+
+    <form class="request-filters">
+      <label>Fecha inicio <input type="date" name="finFechaInicio" [(ngModel)]="filtrosFinanzas.fechaInicio" /></label>
+      <label>Fecha fin <input type="date" name="finFechaFin" [(ngModel)]="filtrosFinanzas.fechaFin" /></label>
+      <label *ngIf="activeTab === 'devoluciones'">
+        Estado
+        <select name="finEstado" [(ngModel)]="filtrosFinanzas.estado">
+          <option value="">Todos</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="APROBADA">Aprobada</option>
+          <option value="RECHAZADA">Rechazada</option>
+          <option value="DEVUELTA">Devuelta</option>
+        </select>
+      </label>
+      <button class="primary-button" type="button" (click)="cargarDatosFinanzas()">Filtrar</button>
+    </form>
+
+    <div class="metric-grid" *ngIf="activeTab === 'finanzas-dashboard' && dashboardFinanzas">
+      <article class="metric-card"><span class="metric-label">Ingresos</span><strong>{{ moneda(dashboardFinanzas.ingresos) }}</strong></article>
+      <article class="metric-card"><span class="metric-label">Cancelaciones</span><strong>{{ moneda(dashboardFinanzas.cancelaciones) }}</strong></article>
+      <article class="metric-card"><span class="metric-label">Devuelto</span><strong>{{ moneda(dashboardFinanzas.devolucionesRealizadas) }}</strong></article>
+      <article class="metric-card"><span class="metric-label">Pagos</span><strong>{{ dashboardFinanzas.pagosRegistrados }}</strong></article>
+    </div>
+
+    <div class="table-wrap" *ngIf="activeTab === 'pagos'">
+      <table>
+        <thead><tr><th>Pago</th><th>Cita</th><th>Monto</th><th>Metodo</th><th>Tarjeta</th><th>Estado</th><th>Fecha</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let pago of pagosFinanzas">
+            <td>#{{ pago.idPago }}</td><td>#{{ pago.codCita }}</td><td>{{ moneda(pago.monto) }}</td><td>{{ pago.metodoPago }}</td>
+            <td>{{ pago.numeroTarjeta || '-' }}</td><td>{{ pago.estado }}</td><td>{{ pago.fechaPago }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" *ngIf="activeTab === 'devoluciones'">
+      <table>
+        <thead><tr><th>Solicitud</th><th>Cita</th><th>Paciente</th><th>Medico</th><th>Monto</th><th>Metodo</th><th>Estado</th><th>Accion</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let devolucion of devolucionesFinanzas">
+            <td>#{{ devolucion.idSolicitud }}</td>
+            <td>#{{ devolucion.codCita }}</td>
+            <td>{{ devolucion.paciente }}</td>
+            <td>{{ devolucion.medico }}</td>
+            <td>{{ moneda(devolucion.monto) }}</td>
+            <td>{{ devolucion.metodoPago }} · {{ devolucion.numeroTarjetaPago || '-' }}</td>
+            <td><span [class]="devolucion.estado === 'PENDIENTE' ? 'badge pending' : devolucion.estado === 'APROBADA' ? 'badge warning' : devolucion.estado === 'DEVUELTA' ? 'badge success' : 'badge danger'">{{ devolucion.estado }}</span></td>
+            <td>
+              <button *ngIf="esAprobadorDevoluciones() && devolucion.estado === 'PENDIENTE'" class="small primary-button" type="button" (click)="aprobarDevolucion(devolucion)">Aprobar</button>
+              <button *ngIf="esAprobadorDevoluciones() && devolucion.estado === 'PENDIENTE'" class="small reject-button" type="button" (click)="rechazarDevolucion(devolucion)">Rechazar</button>
+              <input *ngIf="esCajero() && devolucion.estado === 'APROBADA'" name="tarjetaDestino{{ devolucion.idSolicitud }}" [(ngModel)]="tarjetaDestinoDevolucion[devolucion.idSolicitud]" placeholder="Tarjeta destino" />
+              <button *ngIf="esCajero() && devolucion.estado === 'APROBADA'" class="small primary-button" type="button" (click)="ejecutarDevolucion(devolucion)">Devolver</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </sidebar>
